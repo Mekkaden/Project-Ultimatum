@@ -1,4 +1,4 @@
-# ⚡️ PROJECT ULTIMATUM
+#  PROJECT ULTIMATUM
 
 > **"Periodization is the weapon of the elite. Choosing a focus does not mean sacrificing the rest."**
 
@@ -6,7 +6,7 @@ Welcome to **ULTIMATUM** — not just another fitness app, but a goddamn *manife
 
 We got tired of generic fitness apps telling you to do 3 sets of 10 and eat chicken broccoli and rice. This is built for the obsessed. This is for the ones who want to carve their physique like a Greek statue, lift ungodly amounts of weight, and move like a gymnast.
 
-## 🧬 Why is this so fucking cool?
+##  Why is this so cool?
 
 ULTIMATUM isn't built on cookie-cutter templates. It's built on **Directives**:
 - **THE TITAN (Hypertrophy)** - Build mass and carve your physique.
@@ -18,7 +18,7 @@ Add in blazing-fast **AI Vision macros scanning** (snap a pic of your food, get 
 
 This is the ultimate toolkit to reach your physical peak.
 
-## 🤝 Join the Cult (How to Contribute)
+##  Join the Cult (How to Contribute)
 
 We are building an army of elite developers and fitness nerds to make this the greatest platform on the internet. Have an idea? Found a bug? Want to add a crazy new feature? **WE WANT YOU.**
 
