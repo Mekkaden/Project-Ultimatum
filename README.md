@@ -2,7 +2,7 @@
 
 > **"Periodization is the weapon of the elite. Choosing a focus does not mean sacrificing the rest."**
 
-Welcome to **ULTIMATUM** — not just another fitness app, but a goddamn *manifesto* for aesthetic dominance, absolute strength, and elite performance. 
+Welcome to **ULTIMATUM** — not just another fitness app, but a  *manifesto* for aesthetic dominance, absolute strength, and elite performance. 
 
 We got tired of generic fitness apps telling you to do 3 sets of 10 and eat chicken broccoli and rice. This is built for the obsessed. This is for the ones who want to carve their physique like a Greek statue, lift ungodly amounts of weight, and move like a gymnast.
 
