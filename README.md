@@ -6,7 +6,7 @@ Welcome to **ULTIMATUM** — not just another fitness app, but a goddamn *manife
 
 We got tired of generic fitness apps telling you to do 3 sets of 10 and eat chicken broccoli and rice. This is built for the obsessed. This is for the ones who want to carve their physique like a Greek statue, lift ungodly amounts of weight, and move like a gymnast.
 
-##  Why is this so cool?
+##  Why is this different?
 
 ULTIMATUM isn't built on cookie-cutter templates. It's built on **Directives**:
 - **THE TITAN (Hypertrophy)** - Build mass and carve your physique.
