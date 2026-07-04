@@ -1,39 +1,55 @@
-#  PROJECT ULTIMATUM
+# PROJECT ULTIMATUM
 
 > **"Periodization is the weapon of the elite. Choosing a focus does not mean sacrificing the rest."**
 
-Welcome to **ULTIMATUM** — not just another fitness app, but a  *manifesto* for aesthetic dominance, absolute strength, and elite performance. 
+**ULTIMATUM** is a Progressive Web Application built as a non-profit initiative with one mission: to give the global fitness community access to genuinely evidence-based, clinically-informed training and nutrition protocols — completely free of commercial compromise.
 
-We got tired of generic fitness apps telling you to do 3 sets of 10 and eat chicken broccoli and rice. This is built for the obsessed. This is for the ones who want to carve their physique like a Greek statue, lift ungodly amounts of weight, and move like a gymnast.
+This is not a product. It is a protocol. Every training split, every exercise prescription, every nutritional guideline inside this platform is derived from peer-reviewed sports science literature and translated into a structured, actionable system. No upsells. No manufactured complexity. No cookie-cutter templates wrapped in a premium paywall. The only reason a premium tier exists is to fund real 1-to-1 coaching and the infrastructure costs of running a genuinely powerful AI nutrition analysis system. The platform itself — the training, the doctrine, the progression schemes — will always be free.
 
-##  Why is this different?
+## Why This Exists
 
-ULTIMATUM isn't built on cookie-cutter templates. It's built on **Directives**:
-- **THE TITAN (Hypertrophy)** - Build mass and carve your physique.
-- **THE JUGGERNAUT (Strength)** - Maximize force production. Lift heavy.
-- **THE MONK (Calisthenics)** - Master your bodyweight and elite techniques.
-- **THE HYBRID (Jack of All Trades)** - Look great, get strong, move well.
+The fitness industry has a signal-to-noise problem. It is saturated with influencer-driven content that prioritizes engagement over accuracy, and with apps that are sophisticated monetization engines wearing the costume of health tools. ULTIMATUM was built as a direct response to that. The owner is a fitness coach who extensively reads clinical exercise science literature and has spent years translating that research into practical training systems for real people. This platform is the systematic result of that work.
 
-Add in blazing-fast **AI Vision macros scanning** (snap a pic of your food, get your macros instantly), natural language diet logging ("I ate 200g of steak"), and a UI that looks like it was designed in the year 2049.
+## What Makes This Different
 
-This is the ultimate toolkit to reach your physical peak.
+ULTIMATUM is structured around **Directives** — distinct training philosophies that define your entire approach, not just your workout split. Each Directive carries its own periodization model, exercise selection logic, set and rep prescriptions, and intensity methodology.
 
-##  Join the Cult (How to Contribute)
+| Directive | Philosophy | Mechanism |
+|---|---|---|
+| **THE TITAN** (Hypertrophy) | Build appreciable muscle mass with a strong aesthetic bias | Volume-driven, progressive overload with RIR-based autoregulation |
+| **THE JUGGERNAUT** (Strength) | Maximize force production and compound lift performance | Intensity-focused, periodized around the competitive big three |
+| **THE MONK** (Calisthenics) | Achieve full mastery of bodyweight strength and gymnastics skills | Leverage-progressive skill tree, from fundamentals to elite statics |
+| **THE HYBRID** (Jack of All Trades) | Develop the full athletic profile — size, strength, and movement quality | Structured concurrent training with intelligent fatigue management |
 
-We are building an army of elite developers and fitness nerds to make this the greatest platform on the internet. Have an idea? Found a bug? Want to add a crazy new feature? **WE WANT YOU.**
+Intensity is governed by RIR (Reps in Reserve) — a clinically validated proximity-to-failure metric that replaces subjective RPE guesswork. Every working set has a prescribed RIR target, making autoregulation systematic rather than intuitive.
 
-1. **Fork this repository** like it's a new PR you're about to hit.
-2. **Clone it** locally and spin up the development server.
-3. **Branch out** (`git checkout -b feature/world-domination`).
-4. **Code your face off**. Make it aesthetic, make it performant.
-5. **Commit your changes** (`git commit -m 'Added some crazy new feature'`).
-6. **Push to the branch** (`git push origin feature/world-domination`).
-7. **Submit a Merge Request (PR)**. We will review it, maybe shed a tear of joy, and merge it into the master branch.
+Nutrition is powered by three integrated systems:
 
-### What we need help with:
-- Animations (Framer Motion wizards, WYA?)
-- AI prompt tuning for food scanning
-- Expanding the exercise database
-- Making the UI even darker, sleeker, and more premium
+- **AI Vision Scanning** — photograph a meal and receive a macro breakdown in seconds, powered by a purpose-built image analysis model
+- **Natural Language Logging** — describe what you ate in plain text and the system extracts the nutritional data automatically
+- **Manual Tracking** — backed by the USDA FoodData Central database, one of the most comprehensive and verified nutritional databases available
 
-Let's build something legendary. Welcome to ULTIMATUM.
+## Join the Cult
+
+We are building something that genuinely has not been done before at this level of quality, in this space, for free. If you are a developer who cares about craft — about animations that feel physical, about interfaces that respect the user's intelligence, about code that is actually maintainable — we want you involved.
+
+### How to Contribute
+
+1. Fork this repository.
+2. Clone it locally and spin up the development server (`npm run dev`).
+3. Branch out — `git checkout -b feature/your-idea`
+4. Build something meaningful. The standard here is high. Make it aesthetic, make it performant, make it honest.
+5. Commit your changes — `git commit -m 'feat: description of what you built'`
+6. Push to your branch — `git push origin feature/your-idea`
+7. Open a Pull Request. We review everything carefully and merge what raises the bar.
+
+### What We Need
+
+- **Framer Motion engineers** — The animation system is a core part of the UX. We want people who think in terms of physics and feel, not just duration and easing.
+- **AI prompt engineering** — Improving the accuracy and robustness of the nutrition analysis pipeline.
+- **Exercise science contributors** — Help us expand and validate the exercise database and progression schemes.
+- **Mobile performance** — PWA optimization, service worker strategies, smooth 60fps on low-end Android devices.
+
+*This is not a side project. This is an attempt to build something that lasts.*
+
+Welcome to ULTIMATUM.
