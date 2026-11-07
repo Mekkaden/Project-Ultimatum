@@ -5,16 +5,24 @@ import { deleteUser } from "firebase/auth";
  * Where the deletion endpoint lives.
  *
  * The APK is a static export with no server of its own, so it must call the
- * deployed site. The web build calls its own origin. This matches how the other
- * server-backed features in the app choose their endpoint.
+ * deployed site. The web build calls its own origin.
+ *
+ * This deliberately matches the absolute-URL style the rest of the app uses
+ * (WeightTracker, DietDashboard, CustomSplitBuilder, ...). The previous version
+ * whitelisted only hosts ending in "ultimatum.website" and sent everything else
+ * to https://www.ultimatum.website, which meant a request from a Vercel preview
+ * host or the Android WebView could be bounced through a 308 redirect — and a
+ * redirect on a POST drops the Authorization header, turning a valid request
+ * into a 401.
  */
 function deleteEndpoint(): string {
   if (typeof window === "undefined") return "/api/user/delete";
-  // Same rule the rest of the app uses for server-backed features: talk to the
-  // local dev server when one is in front of us, otherwise to the deployment
-  // (the Android app serves its own bundle and has no API beside it).
-  const onDeployedSite = window.location.hostname.endsWith("ultimatum.website");
-  if (onDeployedSite) return "/api/user/delete";
+  const host = window.location.hostname;
+  // Same-origin when the web app is served from the canonical domains.
+  if (host === "ultimatum.website" || host === "www.ultimatum.website") {
+    return "/api/user/delete";
+  }
+  // Android/Capacitor (localhost) and preview deployments call the live site.
   return "https://www.ultimatum.website/api/user/delete";
 }
 
