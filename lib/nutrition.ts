@@ -30,17 +30,21 @@ export interface ActivityLevelInfo {
 /**
  * SINGLE SOURCE OF TRUTH for activity levels.
  *
- * This mirrors calculator.net's calorie calculator exactly (verified against
- * the live site for a 21yo male, 170 cm, 67 kg, Mifflin–St Jeor → BMR 1632.5):
+ * Mirrors calculator.net's calorie calculator exactly (Mifflin–St Jeor).
+ * Verified live for a 21yo male, 170 cm, 67 kg (BMR 1632.5):
  *
  *   Sedentary     1.2    -> 1959
  *   Light         1.375  -> 2245
- *   Moderate      1.55   -> 2530
- *   Active        1.55   -> 2530   (same factor as Moderate on calculator.net)
+ *   Moderate      1.465  -> 2392   (verified against the live site)
+ *   Active        1.55   -> 2530   (verified against the live site)
  *   Very Active   1.725  -> 2816
  *   Extra Active  1.9    -> 3102
  *
- * NOTE: do not hardcode multipliers or labels in any picker. Import
+ * NOTE: Moderate is 1.465, NOT the more common 1.55. calculator.net uses the
+ * classic Harris–Benedict table, which puts 1.465 at "moderately active" and
+ * reserves 1.55 for the next tier up. Do not "correct" this to 1.55.
+ *
+ * Do not hardcode multipliers or labels in any picker. Import
  * ACTIVITY_LEVELS / ACTIVITY_ORDER so every screen stays in sync.
  */
 export const ACTIVITY_LEVELS: Record<ActivityLevel, ActivityLevelInfo> = {
@@ -57,7 +61,7 @@ export const ACTIVITY_LEVELS: Record<ActivityLevel, ActivityLevelInfo> = {
     description: "Training once to three times a week.",
   },
   moderate: {
-    multiplier: 1.55,
+    multiplier: 1.465,
     shortLabel: "Moderate",
     label: "Moderate: exercise 4-5 times/week",
     description: "Four to five sessions a week.",
@@ -100,13 +104,15 @@ export function activityMultiplier(level: ActivityLevel): number {
 
 /** Legacy key kept so older saved values continue to resolve sensibly. */
 const LEGACY_ACTIVITY_ALIASES: Record<string, ActivityLevel> = {
-  // The pre-fix "active" bucket used 1.725 and meant "very active".
+  // Numeric multipliers are ambiguous now that Moderate is 1.465, so map them
+  // explicitly rather than by multiplier equality.
+  "1.2": "sedentary",
+  "1.375": "light",
+  "1.465": "moderate",
+  "1.55": "active",
+  // Values written before the six-tier migration.
   "1.725": "very_active",
   "1.9": "extra_active",
-  "1.55": "moderate",
-  "1.375": "light",
-  "1.2": "sedentary",
-  very_active_legacy: "very_active",
 };
 
 /**
