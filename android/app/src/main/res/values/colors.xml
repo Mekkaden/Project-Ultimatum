@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Black is the app's base colour: the WebView paints black on first frame,
+         so the splash must end on black too or the launch flashes white. -->
+    <color name="splash_background">#FF000000</color>
+    <color name="colorPrimary">#FF000000</color>
+    <color name="colorPrimaryDark">#FF000000</color>
+    <color name="colorAccent">#FFFFFFFF</color>
+    <color name="status_bar">#FF000000</color>
+</resources>

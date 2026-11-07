@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ultimatum</string>
+    <string name="title_activity_main">Ultimatum</string>
+    <string name="package_name">com.ultimatum.app</string>
+    <string name="custom_url_scheme">com.ultimatum.app</string>
+</resources>

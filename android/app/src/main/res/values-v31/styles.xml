@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ system splash.
+         The windowSplashScreen* attributes only exist from API 31, so they live
+         in values-v31 to keep older devices compiling.
+
+         The app has no intro screen of its own: a launch should go black for the
+         fraction of a second the system insists on showing something, then the
+         Enter page. The animated icon used to be the leopard artwork, which read
+         as an extra splash screen before the app, so the icon is now transparent:
+         Android still draws its launch window (it always does), but it is the
+         same black frame the Enter page starts on.
+
+         The status bar keeps the launch theme's bar colours. Locking the
+         transparent icon behind a bar icon would cover it again. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FF000000</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:statusBarColor">#FF000000</item>
+        <item name="android:navigationBarColor">#FF000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

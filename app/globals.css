@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+/* Keep the document dark at every point in the lifecycle without painting over
+   content: the WebView's default canvas is white and shows for a frame between
+   navigations ("flash"). The colour lives on the root element's *canvas* only
+   (background on :root, never on a layer above the body), because onboarding
+   screens place their hero images at z-index:-20 and an opaque html background
+   would paint on top of them. */
+html {
+  color-scheme: dark;
+  /* Avoid a white stripe when the mobile soft keyboard resizes the viewport */
+  overscroll-behavior: none;
+}
+
+/* The viewport canvas colour (propagates from the root element). This keeps
+   cold-start paints black while leaving negative-z content visible. */
+:root {
+  background-color: #000000;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  /* Tracker Specific Theme (Modern Lifter Blue) */
+  --color-tracker-bg: #000000;
+  --color-tracker-card: #121212;
+  --color-tracker-border: #252833;
+  --color-tracker-accent: #3B82F6;
+  --color-tracker-accent-faint: rgba(59, 130, 246, 0.15);
+  --color-tracker-text-soft: #9BA1B0;
+  --color-tracker-text-bold: #FFFFFF;
+  
+  --animate-shimmer: shimmer 1.5s infinite;
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+}
+
+/* body must NOT paint an opaque background: pages place their hero images at
+   z-index:-20, which would be hidden behind it. The viewport canvas colour is
+   set on :root above instead. */
+body {
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  /* Prevent layout shift jank on mobile caused by scrollbar appearing */
+  overflow-x: hidden;
+  /* Smooth font rendering on all platforms */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+
+/* Prevent layout-thrash from framer-motion elements during animation.
+   This tells the browser to composite these elements on the GPU.
+   `will-change` alone is enough: an extra `transform: translateZ(0)` turned
+   every animated container into its own rendering boundary, so content that
+   slid back in from off-screen painted a frame late and showed as a clipped
+   edge while the exercise-notes overlay was closing. */
+[data-framer-motion],
+.motion-safe-gpu {
+  will-change: opacity, transform;
+}
+
+/* Fast tap response on touch devices — removes the 300ms click delay */
+* {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Custom scrollbar for modal content */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Invisible scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide global nav when Builder Mode is active */
+body.hide-global-nav #global-nav,
+body.hide-global-nav #global-nav-spacer {
+  display: none !important;
+}
+
+
+.hide-global-nav .global-nav-container {
+  display: none !important;
+}
