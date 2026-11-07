@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, RefreshCw } from 'lucide-react';
-import { calculateBaseNutrition, ActivityLevel, Objective, Gender, ACTIVITY_LEVELS, ACTIVITY_ORDER, normalizeActivityValue } from '@/lib/nutrition';
+import { calculateBaseNutrition, ActivityLevel, Objective, Gender, ACTIVITY_LEVELS, ACTIVITY_ORDER, normalizeActivityValue, calculateBMR, calculateTDEE } from '@/lib/nutrition';
 
 export function RecalculateMacrosModal({ onClose, onSave }: { onClose: () => void, onSave: (plan: any) => void }) {
   const [weight, setWeight] = useState("");
@@ -14,6 +14,13 @@ export function RecalculateMacrosModal({ onClose, onSave }: { onClose: () => voi
   const [gender, setGender] = useState<Gender>("male");
   const [activity, setActivity] = useState<ActivityLevel>("moderate");
   const [goal, setGoal] = useState<Objective>("maintain_tone");
+
+  // Live preview so the user sees the effect of their inputs before saving.
+  const previewWeightKg = (parseFloat(weight) || 70) / (unit === "LBS" ? 2.20462 : 1);
+  const previewAge = parseFloat(age) || 25;
+  const previewHeight = parseFloat(height) || 170;
+  const liveBmr = Math.round(calculateBMR(gender, previewAge, previewHeight, previewWeightKg));
+  const liveTdee = Math.round(calculateTDEE(gender, previewAge, previewHeight, previewWeightKg, activity));
 
   useEffect(() => {
     setWeight(localStorage.getItem("ultimatum_weight") || "");
@@ -133,13 +140,28 @@ export function RecalculateMacrosModal({ onClose, onSave }: { onClose: () => voi
 
           <div>
             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Activity Level</label>
-            <select value={activity} onChange={(e) => setActivity(e.target.value as ActivityLevel)} className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-[#e4fcaf] appearance-none">
-              <option value="sedentary">{ACTIVITY_LEVELS.sedentary.label}</option>
-              <option value="light">{ACTIVITY_LEVELS.light.label}</option>
-              <option value="moderate">{ACTIVITY_LEVELS.moderate.label}</option>
-              <option value="active">{ACTIVITY_LEVELS.active.label}</option>
-              <option value="very_active">{ACTIVITY_LEVELS.very_active.label}</option>
+            <select
+              value={activity}
+              onChange={(e) => setActivity(e.target.value as ActivityLevel)}
+              aria-describedby="activity-description"
+              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-[#e4fcaf] appearance-none"
+            >
+              {ACTIVITY_ORDER.map((key) => (
+                <option key={key} value={key}>
+                  {ACTIVITY_LEVELS[key].label}
+                </option>
+              ))}
             </select>
+            <p id="activity-description" className="mt-2 text-[11px] leading-snug text-neutral-500">
+              {ACTIVITY_LEVELS[activity].description}{" "}
+              <span className="text-neutral-600">
+                (x{ACTIVITY_LEVELS[activity].multiplier} activity factor)
+              </span>
+            </p>
+            <p className="mt-2 text-[11px] text-neutral-600">
+              Maintenance: <span className="font-bold text-[#e4fcaf]">{liveTdee.toLocaleString()}</span> kcal/day
+              (BMR {liveBmr.toLocaleString()})
+            </p>
           </div>
 
           <div>

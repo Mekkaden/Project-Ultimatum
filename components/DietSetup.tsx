@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ACTIVITY_LEVELS, ActivityLevel } from '@/lib/nutrition';
+import { ACTIVITY_LEVELS, ACTIVITY_ORDER, ActivityLevel } from '@/lib/nutrition';
 
 export default function DietSetup(props) {
   const stateStep = useState(1);
@@ -196,12 +196,13 @@ export default function DietSetup(props) {
               onChange={function(e) { setActivityLevel(e.target.value as ActivityLevel); }}
               className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-4 text-sm font-bold text-white outline-none focus:border-red-600 focus:shadow-[0_0_15px_rgba(220,38,38,0.2)] transition-all appearance-none"
             >
-              <option value="sedentary">{ACTIVITY_LEVELS.sedentary.label}</option>
-              <option value="light">{ACTIVITY_LEVELS.light.label}</option>
-              <option value="moderate">{ACTIVITY_LEVELS.moderate.label}</option>
-              <option value="active">{ACTIVITY_LEVELS.active.label}</option>
-              <option value="very_active">{ACTIVITY_LEVELS.very_active.label}</option>
+              {ACTIVITY_ORDER.map(function(key) {
+                return <option key={key} value={key}>{ACTIVITY_LEVELS[key].label}</option>;
+              })}
             </select>
+            <p className="mt-2 text-[11px] leading-snug text-neutral-500">
+              {ACTIVITY_LEVELS[activityLevel].description}
+            </p>
           </div>
           <button 
             onClick={function() { if(weight && age && height) setStep(2); }}

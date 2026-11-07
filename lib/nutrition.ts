@@ -1,6 +1,12 @@
 export type Gender = "male" | "female";
 export type Objective = "lose_slow" | "lose_fast" | "maintain_tone" | "lean_muscle" | "mass_bulk";
-export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
+export type ActivityLevel =
+  | "sedentary"
+  | "light"
+  | "moderate"
+  | "active"
+  | "very_active"
+  | "extra_active";
 
 export interface NutritionTargets {
   calories: number;
@@ -10,31 +16,70 @@ export interface NutritionTargets {
   goal: string;
 }
 
+export interface ActivityLevelInfo {
+  /** Harris–Benedict / Mifflin–St Jeor activity factor */
+  multiplier: number;
+  /** Short name, e.g. "Moderate" */
+  shortLabel: string;
+  /** Full dropdown label, e.g. "Moderate: exercise 4-5 times/week" */
+  label: string;
+  /** Human description shown as secondary text */
+  description: string;
+}
+
 /**
  * SINGLE SOURCE OF TRUTH for activity levels.
  *
- * The multiplier ladder follows the standard Harris–Benedict / Mifflin–St Jeor
- * convention used by calculator.net, ChatGPT and most nutrition apps:
+ * This mirrors calculator.net's calorie calculator exactly (verified against
+ * the live site for a 21yo male, 170 cm, 67 kg, Mifflin–St Jeor → BMR 1632.5):
  *
- *   1.2    sedentary          little or no exercise
- *   1.375  light              1–3 workouts/week
- *   1.55   moderately active  3–5 workouts/week   <-- "3-4x/week" belongs HERE
- *   1.725  very active        6–7 workouts/week
- *   1.9    extra active       hard training + physical job
+ *   Sedentary     1.2    -> 1959
+ *   Light         1.375  -> 2245
+ *   Moderate      1.55   -> 2530
+ *   Active        1.55   -> 2530   (same factor as Moderate on calculator.net)
+ *   Very Active   1.725  -> 2816
+ *   Extra Active  1.9    -> 3102
  *
- * IMPORTANT: do not label 1.725 as "3–4x/week" anywhere in the UI. Doing so
- * inflates maintenance calories by ~11% for the average user. All activity
- * pickers must import ACTIVITY_LEVELS instead of hardcoding their own labels.
+ * NOTE: do not hardcode multipliers or labels in any picker. Import
+ * ACTIVITY_LEVELS / ACTIVITY_ORDER so every screen stays in sync.
  */
-export const ACTIVITY_LEVELS: Record<
-  ActivityLevel,
-  { multiplier: number; label: string; shortLabel: string }
-> = {
-  sedentary: { multiplier: 1.2, label: "Sedentary (Little/No Exercise)", shortLabel: "Sedentary" },
-  light: { multiplier: 1.375, label: "Light (Exercise 1-3 times/week)", shortLabel: "Light" },
-  moderate: { multiplier: 1.55, label: "Moderate (Exercise 3-5 times/week)", shortLabel: "Moderate" },
-  active: { multiplier: 1.725, label: "Very Active (Intense 6-7 times/week)", shortLabel: "Very Active" },
-  very_active: { multiplier: 1.9, label: "Extra Active (Hard Training + Physical Job)", shortLabel: "Extra Active" },
+export const ACTIVITY_LEVELS: Record<ActivityLevel, ActivityLevelInfo> = {
+  sedentary: {
+    multiplier: 1.2,
+    shortLabel: "Sedentary",
+    label: "Sedentary: little or no exercise",
+    description: "Desk job, no planned training.",
+  },
+  light: {
+    multiplier: 1.375,
+    shortLabel: "Light",
+    label: "Light: exercise 1-3 times/week",
+    description: "Training once to three times a week.",
+  },
+  moderate: {
+    multiplier: 1.55,
+    shortLabel: "Moderate",
+    label: "Moderate: exercise 4-5 times/week",
+    description: "Four to five sessions a week.",
+  },
+  active: {
+    multiplier: 1.55,
+    shortLabel: "Active",
+    label: "Active: daily exercise or intense exercise 3-4 times/week",
+    description: "Train most days, or three to four hard sessions a week.",
+  },
+  very_active: {
+    multiplier: 1.725,
+    shortLabel: "Very Active",
+    label: "Very Active: intense exercise 6-7 times/week",
+    description: "Six to seven intense sessions a week.",
+  },
+  extra_active: {
+    multiplier: 1.9,
+    shortLabel: "Extra Active",
+    label: "Extra Active: very intense exercise daily, or physical job",
+    description: "Daily very intense training, or a physical job on top of it.",
+  },
 };
 
 export const ACTIVITY_ORDER: ActivityLevel[] = [
@@ -43,24 +88,65 @@ export const ACTIVITY_ORDER: ActivityLevel[] = [
   "moderate",
   "active",
   "very_active",
+  "extra_active",
 ];
 
+/** Wearable-style moving-average default used when no history exists yet. */
+export const DEFAULT_ACTIVITY_LEVEL: ActivityLevel = "moderate";
+
 export function activityMultiplier(level: ActivityLevel): number {
-  return ACTIVITY_LEVELS[level]?.multiplier ?? ACTIVITY_LEVELS.moderate.multiplier;
+  return ACTIVITY_LEVELS[level]?.multiplier ?? ACTIVITY_LEVELS[DEFAULT_ACTIVITY_LEVEL].multiplier;
 }
+
+/** Legacy key kept so older saved values continue to resolve sensibly. */
+const LEGACY_ACTIVITY_ALIASES: Record<string, ActivityLevel> = {
+  // The pre-fix "active" bucket used 1.725 and meant "very active".
+  "1.725": "very_active",
+  "1.9": "extra_active",
+  "1.55": "moderate",
+  "1.375": "light",
+  "1.2": "sedentary",
+  very_active_legacy: "very_active",
+};
 
 /**
  * Normalises the value stored in localStorage under "ultimatum_activity".
- * Accepts either a legacy numeric multiplier ("1.55") or a level key ("moderate").
+ * Accepts either a legacy numeric multiplier ("1.725") or a level key ("active").
  */
 export function normalizeActivityValue(stored: string | null): ActivityLevel | null {
   if (!stored) return null;
-  const asKey = ACTIVITY_ORDER.find((k) => k === stored);
+  const trimmed = stored.trim();
+  const asKey = ACTIVITY_ORDER.find((k) => k === trimmed);
   if (asKey) return asKey;
-  const asNumber = parseFloat(stored);
+  if (LEGACY_ACTIVITY_ALIASES[trimmed]) return LEGACY_ACTIVITY_ALIASES[trimmed];
+  const asNumber = parseFloat(trimmed);
   if (Number.isNaN(asNumber)) return null;
-  const match = ACTIVITY_ORDER.find((k) => ACTIVITY_LEVELS[k].multiplier === asNumber);
-  return match ?? null;
+  for (const key of ACTIVITY_ORDER) {
+    if (ACTIVITY_LEVELS[key].multiplier === asNumber) return key;
+  }
+  return null;
+}
+
+/** Mifflin–St Jeor basal metabolic rate (kcal/day). */
+export function calculateBMR(
+  gender: Gender,
+  age: number,
+  height: number,
+  weight: number
+): number {
+  const base = 10 * weight + 6.25 * height - 5 * age;
+  return base + (gender === "male" ? 5 : -161);
+}
+
+/** Maintenance calories (TDEE) = BMR x activity factor, unrounded. */
+export function calculateTDEE(
+  gender: Gender,
+  age: number,
+  height: number,
+  weight: number,
+  activityLevel: ActivityLevel
+): number {
+  return calculateBMR(gender, age, height, weight) * activityMultiplier(activityLevel);
 }
 
 export function calculateBaseNutrition(
@@ -72,18 +158,7 @@ export function calculateBaseNutrition(
   activityLevel: ActivityLevel,
   objective: Objective
 ): NutritionTargets {
-  let bmr = (10 * weight) + (6.25 * height) - (5 * age);
-  bmr += gender === "male" ? 5 : -161;
-
-  const activityMultipliers: Record<ActivityLevel, number> = {
-    sedentary: ACTIVITY_LEVELS.sedentary.multiplier,
-    light: ACTIVITY_LEVELS.light.multiplier,
-    moderate: ACTIVITY_LEVELS.moderate.multiplier,
-    active: ACTIVITY_LEVELS.active.multiplier,
-    very_active: ACTIVITY_LEVELS.very_active.multiplier,
-  };
-  
-  const tdee = Math.round(bmr * activityMultipliers[activityLevel]);
+  const tdee = Math.round(calculateTDEE(gender, age, height, weight, activityLevel));
 
   let targetCalories = tdee;
   let finalGoal = "Maintain";

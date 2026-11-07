@@ -51,7 +51,8 @@ export default function AutoSetupWizard() {
     light: ACTIVITY_LEVELS.light.label,
     moderate: ACTIVITY_LEVELS.moderate.label,
     active: ACTIVITY_LEVELS.active.label,
-    very_active: ACTIVITY_LEVELS.very_active.label
+    very_active: ACTIVITY_LEVELS.very_active.label,
+    extra_active: ACTIVITY_LEVELS.extra_active.label
   };
 
   // Step 2 Data (Objective)
