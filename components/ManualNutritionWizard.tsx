@@ -9,7 +9,7 @@ import { requestNotificationPermissions, scheduleWelcomeNotification, scheduleDa
 import { Ruler, Weight, Activity, ChevronRight, ChevronLeft, ChevronDown, Loader2 } from "lucide-react";
 import DecryptedText from "./DecryptedText";
 import NutritionReview from "./NutritionReview";
-import { calculateBaseNutrition, NutritionTargets, Gender, Objective, ActivityLevel } from "@/lib/nutrition";
+import { calculateBaseNutrition, NutritionTargets, Gender, Objective, ActivityLevel, ACTIVITY_LEVELS } from "@/lib/nutrition";
 
 const montserrat = Montserrat({ subsets: ["latin"], weight: ["200", "400", "600", "800"] });
 
@@ -33,11 +33,11 @@ export default function ManualNutritionWizard() {
   const [isActivityOpen, setIsActivityOpen] = useState(false);
 
   const activityOptions: Record<ActivityLevel, string> = {
-    sedentary: "Sedentary (Little/No Exercise)",
-    light: "Light (Exercise 1-3 times/week)",
-    moderate: "Moderate (Exercise 4-5 times/week)",
-    active: "Active (Daily exercise/Intense 3-4x)",
-    very_active: "Very Active (Intense 6-7x/Physical Job)"
+    sedentary: ACTIVITY_LEVELS.sedentary.label,
+    light: ACTIVITY_LEVELS.light.label,
+    moderate: ACTIVITY_LEVELS.moderate.label,
+    active: ACTIVITY_LEVELS.active.label,
+    very_active: ACTIVITY_LEVELS.very_active.label
   };
 
   // Step 2 Data (Objective)

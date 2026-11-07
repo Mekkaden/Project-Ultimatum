@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, RefreshCw } from 'lucide-react';
-import { calculateBaseNutrition, ActivityLevel, Objective, Gender } from '@/lib/nutrition';
+import { calculateBaseNutrition, ActivityLevel, Objective, Gender, ACTIVITY_LEVELS, ACTIVITY_ORDER, normalizeActivityValue } from '@/lib/nutrition';
 
 export function RecalculateMacrosModal({ onClose, onSave }: { onClose: () => void, onSave: (plan: any) => void }) {
   const [weight, setWeight] = useState("");
@@ -27,14 +27,8 @@ export function RecalculateMacrosModal({ onClose, onSave }: { onClose: () => voi
     
     // Migrate old activity multiplier to new ActivityLevel
     const storedActivity = localStorage.getItem("ultimatum_activity");
-    if (storedActivity === "1.2") setActivity("sedentary");
-    else if (storedActivity === "1.375") setActivity("light");
-    else if (storedActivity === "1.55") setActivity("moderate");
-    else if (storedActivity === "1.725") setActivity("active");
-    else if (storedActivity === "1.9") setActivity("very_active");
-    else if (storedActivity && ["sedentary", "light", "moderate", "active", "very_active"].includes(storedActivity)) {
-      setActivity(storedActivity as ActivityLevel);
-    }
+    const migratedActivity = normalizeActivityValue(storedActivity);
+    if (migratedActivity) setActivity(migratedActivity);
     
     // Migrate old goals to new Objectives
     const storedGoal = localStorage.getItem("ultimatum_goal");
@@ -140,11 +134,11 @@ export function RecalculateMacrosModal({ onClose, onSave }: { onClose: () => voi
           <div>
             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Activity Level</label>
             <select value={activity} onChange={(e) => setActivity(e.target.value as ActivityLevel)} className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-[#e4fcaf] appearance-none">
-              <option value="sedentary">Sedentary (Little/No Exercise)</option>
-              <option value="light">Light (Exercise 1-3 times/week)</option>
-              <option value="moderate">Moderate (Exercise 4-5 times/week)</option>
-              <option value="active">Active (Daily exercise/Intense 3-4x)</option>
-              <option value="very_active">Very Active (Intense 6-7x/Physical Job)</option>
+              <option value="sedentary">{ACTIVITY_LEVELS.sedentary.label}</option>
+              <option value="light">{ACTIVITY_LEVELS.light.label}</option>
+              <option value="moderate">{ACTIVITY_LEVELS.moderate.label}</option>
+              <option value="active">{ACTIVITY_LEVELS.active.label}</option>
+              <option value="very_active">{ACTIVITY_LEVELS.very_active.label}</option>
             </select>
           </div>
 

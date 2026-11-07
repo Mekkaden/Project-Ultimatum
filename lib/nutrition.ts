@@ -10,6 +10,59 @@ export interface NutritionTargets {
   goal: string;
 }
 
+/**
+ * SINGLE SOURCE OF TRUTH for activity levels.
+ *
+ * The multiplier ladder follows the standard Harris–Benedict / Mifflin–St Jeor
+ * convention used by calculator.net, ChatGPT and most nutrition apps:
+ *
+ *   1.2    sedentary          little or no exercise
+ *   1.375  light              1–3 workouts/week
+ *   1.55   moderately active  3–5 workouts/week   <-- "3-4x/week" belongs HERE
+ *   1.725  very active        6–7 workouts/week
+ *   1.9    extra active       hard training + physical job
+ *
+ * IMPORTANT: do not label 1.725 as "3–4x/week" anywhere in the UI. Doing so
+ * inflates maintenance calories by ~11% for the average user. All activity
+ * pickers must import ACTIVITY_LEVELS instead of hardcoding their own labels.
+ */
+export const ACTIVITY_LEVELS: Record<
+  ActivityLevel,
+  { multiplier: number; label: string; shortLabel: string }
+> = {
+  sedentary: { multiplier: 1.2, label: "Sedentary (Little/No Exercise)", shortLabel: "Sedentary" },
+  light: { multiplier: 1.375, label: "Light (Exercise 1-3 times/week)", shortLabel: "Light" },
+  moderate: { multiplier: 1.55, label: "Moderate (Exercise 3-5 times/week)", shortLabel: "Moderate" },
+  active: { multiplier: 1.725, label: "Very Active (Intense 6-7 times/week)", shortLabel: "Very Active" },
+  very_active: { multiplier: 1.9, label: "Extra Active (Hard Training + Physical Job)", shortLabel: "Extra Active" },
+};
+
+export const ACTIVITY_ORDER: ActivityLevel[] = [
+  "sedentary",
+  "light",
+  "moderate",
+  "active",
+  "very_active",
+];
+
+export function activityMultiplier(level: ActivityLevel): number {
+  return ACTIVITY_LEVELS[level]?.multiplier ?? ACTIVITY_LEVELS.moderate.multiplier;
+}
+
+/**
+ * Normalises the value stored in localStorage under "ultimatum_activity".
+ * Accepts either a legacy numeric multiplier ("1.55") or a level key ("moderate").
+ */
+export function normalizeActivityValue(stored: string | null): ActivityLevel | null {
+  if (!stored) return null;
+  const asKey = ACTIVITY_ORDER.find((k) => k === stored);
+  if (asKey) return asKey;
+  const asNumber = parseFloat(stored);
+  if (Number.isNaN(asNumber)) return null;
+  const match = ACTIVITY_ORDER.find((k) => ACTIVITY_LEVELS[k].multiplier === asNumber);
+  return match ?? null;
+}
+
 export function calculateBaseNutrition(
   gender: Gender,
   age: number,
@@ -23,11 +76,11 @@ export function calculateBaseNutrition(
   bmr += gender === "male" ? 5 : -161;
 
   const activityMultipliers: Record<ActivityLevel, number> = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    active: 1.725,
-    very_active: 1.9
+    sedentary: ACTIVITY_LEVELS.sedentary.multiplier,
+    light: ACTIVITY_LEVELS.light.multiplier,
+    moderate: ACTIVITY_LEVELS.moderate.multiplier,
+    active: ACTIVITY_LEVELS.active.multiplier,
+    very_active: ACTIVITY_LEVELS.very_active.multiplier,
   };
   
   const tdee = Math.round(bmr * activityMultipliers[activityLevel]);

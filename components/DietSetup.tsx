@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { ACTIVITY_LEVELS, ActivityLevel } from '@/lib/nutrition';
 
 export default function DietSetup(props) {
   const stateStep = useState(1);
@@ -32,9 +33,10 @@ export default function DietSetup(props) {
   const customOffset = stateCustomOffset[0];
   const setCustomOffset = stateCustomOffset[1];
 
-  const stateActivityMultiplier = useState(1.2);
-  const activityMultiplier = stateActivityMultiplier[0];
-  const setActivityMultiplier = stateActivityMultiplier[1];
+  const stateActivityLevel = useState<ActivityLevel>("sedentary");
+  const activityLevel = stateActivityLevel[0];
+  const setActivityLevel = stateActivityLevel[1];
+  const activityMultiplier = ACTIVITY_LEVELS[activityLevel].multiplier;
 
   const stateUnit = useState("LBS");
   const unit = stateUnit[0];
@@ -99,7 +101,7 @@ export default function DietSetup(props) {
     localStorage.setItem("ultimatum_weight", weight);
     localStorage.setItem("ultimatum_weight_unit", unit);
     localStorage.setItem("ultimatum_gender", gender);
-    localStorage.setItem("ultimatum_activity", activityMultiplier.toString());
+    localStorage.setItem("ultimatum_activity", activityLevel);
     localStorage.setItem("ultimatum_goal", goal);
 
     if (props.onComplete) {
@@ -190,15 +192,15 @@ export default function DietSetup(props) {
           <div>
             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Activity Level</label>
             <select 
-              value={activityMultiplier}
-              onChange={function(e) { setActivityMultiplier(parseFloat(e.target.value)); }}
+              value={activityLevel}
+              onChange={function(e) { setActivityLevel(e.target.value as ActivityLevel); }}
               className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-4 text-sm font-bold text-white outline-none focus:border-red-600 focus:shadow-[0_0_15px_rgba(220,38,38,0.2)] transition-all appearance-none"
             >
-              <option value={1.2}>Sedentary (Little or no exercise)</option>
-              <option value={1.375}>Lightly Active (Exercise 1-3 days/week)</option>
-              <option value={1.55}>Moderately Active (Exercise 3-5 days/week)</option>
-              <option value={1.725}>Active (Exercise 6-7 days/week)</option>
-              <option value={1.9}>Very Active (Hard exercise 6-7 days/week)</option>
+              <option value="sedentary">{ACTIVITY_LEVELS.sedentary.label}</option>
+              <option value="light">{ACTIVITY_LEVELS.light.label}</option>
+              <option value="moderate">{ACTIVITY_LEVELS.moderate.label}</option>
+              <option value="active">{ACTIVITY_LEVELS.active.label}</option>
+              <option value="very_active">{ACTIVITY_LEVELS.very_active.label}</option>
             </select>
           </div>
           <button 
