@@ -72,7 +72,7 @@ export const CAMPAIGN_3_DAY: Campaign = {
         { slotName: "Horizontal Press (Chest Focus - Back-off)", prescribedEquipment: "Machine Chest Press", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["Flat Barbell Bench", "Flat DB Press"]           , videoUrl: "https://www.youtube.com/shorts/1V3vpcaxRYQ" },
         { slotName: "Vertical Pull (Lat Focus)", prescribedEquipment: "Machine Pulldown", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["Lat Pulldown (Cable)", "Pull-Up"]           , videoUrl: "https://youtu.be/Hdc7Mw6BIEE" },
         { slotName: "Overhead Press (Front Delt Focus)", prescribedEquipment: "Barbell Overhead Press", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["Cable Shoulder Press", "Machine Shoulder Press", "DB Shoulder Press"]           , videoUrl: "https://www.youtube.com/shorts/OLePvpxQEGk" },
-        { slotName: "Chest-Supported Row (Mid-Back Focus)", prescribedEquipment: "Chest-Supported T-Bar Row", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["Helms DB Row", "Seal Row"]           , videoUrl: "https://www.youtube.com/shorts/OL8yGrkXyiQ" },
+        { slotName: "Chest-Supported Row (Mid-Back Focus)", prescribedEquipment: "Chest-Supported T-Bar Row", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["Dumbbell Row", "Seal Row"]           , videoUrl: "https://www.youtube.com/shorts/OL8yGrkXyiQ" },
         { slotName: "Overhead Tricep Extension (Long Head Focus)", prescribedEquipment: "Overhead Cable Triceps Extension", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["DB Overhead Extension", "EZ Bar French Press"]           , videoUrl: "https://www.youtube.com/watch?v=sUFUQVMWdnU&pp=ygUYY2FibGUgb3ZlcmhlYWQgZXh0ZW5zaW9u0gcJCTMMAYcqIYzv" },
         { slotName: "Elbow-at-Side Curl", prescribedEquipment: "Cable EZ Curl", sets: 2, targetRIR: "S1: 2-1 RIR, S2: 1-0 RIR", substitutions: ["Barbell Curl", "DB Curl"]           , videoUrl: "https://www.youtube.com/results?search_query=Cable+EZ+Curl+form" }
       ]
@@ -1069,7 +1069,7 @@ export const CAMPAIGN_HYBRID_6_DAY: Campaign = {
 export const CAMPAIGN_FEMALE_3_DAY: Campaign = {
   id: "female-3-day-split",
   title: "3 Days: Women's Foundations (Full Body)",
-  globalRule: "Stephanie Buttermore's Foundations Protocol - 3 Day Split",
+  globalRule: "ULTIMATUM Foundations Protocol - 3 Day Split",
   days: [
     {
       id: "f3d-d1",
@@ -1156,7 +1156,7 @@ export const CAMPAIGN_FEMALE_3_DAY: Campaign = {
 export const CAMPAIGN_FEMALE_4_DAY: Campaign = {
   id: "female-4-day-split",
   title: "4 Days: Women's Foundations",
-  globalRule: "Stephanie Buttermore's Foundations Protocol - 4 Day Split",
+  globalRule: "ULTIMATUM Foundations Protocol - 4 Day Split",
   days: [
     {
       id: "f4d-d1",
@@ -1252,7 +1252,7 @@ export const CAMPAIGN_FEMALE_4_DAY: Campaign = {
 export const CAMPAIGN_FEMALE_5_DAY: Campaign = {
   id: "female-5-day-split",
   title: "5 Days: Women's Optimization",
-  globalRule: "Stephanie Buttermore's Optimization Protocol - 5 Day Split",
+  globalRule: "ULTIMATUM Optimization Protocol - 5 Day Split",
   days: [
     {
       id: "f5d-d1",
