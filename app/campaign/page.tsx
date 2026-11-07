@@ -435,6 +435,16 @@ export default function CampaignPage() {
   };
 
   const handleCustomDeploy = (deployedCampaign: Campaign) => {
+    // The just-deployed split MUST win. "ultimatum_campaign_override" holds a
+    // snapshot of a previous split's days and takes priority over everything in
+    // getLocalCampaign(), so leaving it in place made the routine screen show
+    // the new split while /campaign/track silently loaded the old one (e.g.
+    // tapping "Full Body 1" opened "Push Day"). Clear it on every deploy.
+    try {
+      localStorage.removeItem("ultimatum_campaign_override");
+    } catch {
+      // localStorage unavailable — the in-memory campaign below still applies.
+    }
     setCampaign(deployedCampaign);
     setIsBuilderMode(false);
     setCurrentDayIndex(0);

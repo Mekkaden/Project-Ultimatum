@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { App as CapacitorApp } from "@capacitor/app";
+import { backButtonStore } from "@/lib/backButtonStore";
 
 export default function NativeBackButton() {
   const pathname = usePathname();
@@ -13,6 +14,13 @@ export default function NativeBackButton() {
     if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform()) {
       
       const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        // Give in-app handlers (open modals, builder steps) first refusal.
+        // Previously this was never consulted, so a screen registering
+        // useHardwareBack still exited the app on Back.
+        if (backButtonStore.handleBack()) {
+          return;
+        }
+
         // Define root paths where pressing back should exit the app instead of popping web history
         const rootPaths = [
           "/campaign",
@@ -26,9 +34,12 @@ export default function NativeBackButton() {
         // If the current path is a primary tab, exit the app
         if (rootPaths.includes(pathname || "")) {
           CapacitorApp.exitApp();
-        } else {
+        } else if (canGoBack) {
           // If we are on a nested screen (like /campaign/track), pop the NextJS history
           router.back();
+        } else {
+          // Some platforms start with an empty history stack; exit rather than dead-end.
+          CapacitorApp.exitApp();
         }
       });
 

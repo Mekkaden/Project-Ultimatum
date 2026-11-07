@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, AlertTriangle, ChevronRight, X, PlayCircle, Bot, Loader2, BedDouble, Dumbbell } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Trash2, Save, AlertTriangle, ChevronRight, ChevronLeft, X, PlayCircle, Bot, Loader2, BedDouble, Dumbbell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuthHeaders } from "@/lib/utils";
 import { useOfflineSession } from "@/lib/useOfflineSession";
+import { useHardwareBack } from "@/lib/useHardwareBack";
 import type { Campaign, WorkoutDay, Exercise } from "../lib/workout-data";
 import ExercisePicker from "./ExercisePicker";
 import { resolveMovementName } from "@/lib/exercise-aliases";
@@ -383,6 +384,11 @@ Return ONLY this exact JSON structure, nothing else, no markdown, no explanation
     try {
       // Always save locally first — this never fails
       localStorage.setItem("ultimatum_custom_campaign_cache", JSON.stringify(customCampaign));
+      // Drop any manual edits made to a PREVIOUS routine. That override outranks
+      // the freshly deployed split in getLocalCampaign(), which is what made the
+      // tracker open the old workout ("Push Day") while the routine list showed
+      // the newly imported one ("Full Body 1").
+      localStorage.removeItem("ultimatum_campaign_override");
       // Ensure frequency is marked as "custom" so returning login knows data exists
       localStorage.setItem("ultimatum_frequency", "custom");
       onDeploy(customCampaign);
@@ -407,6 +413,42 @@ Return ONLY this exact JSON structure, nothing else, no markdown, no explanation
       setIsDeploying(false);
     }
   };
+
+  // ---- Back navigation ----
+
+  /**
+   * Back means "undo the most recent step", not "leave the builder":
+   *   AI preview -> discard the preview, stay on the AI tab
+   *   AI tab     -> switch to the Manual tab
+   *   no onCancel -> we are mid-onboarding, so there is nowhere to go; return
+   *                  false so the hardware handler falls through as before
+   */
+  const handleBack = useCallback((): boolean => {
+    if (parsePreview) {
+      setParsePreview(null);
+      setParseError("");
+      return true;
+    }
+    if (activeTab === "ai") {
+      setActiveTab("manual");
+      return true;
+    }
+    if (onCancel) {
+      onCancel();
+      return true;
+    }
+    return false;
+  }, [parsePreview, activeTab, onCancel]);
+
+  const backLabel = parsePreview
+    ? "Back to import"
+    : activeTab === "ai"
+      ? "Back to manual builder"
+      : "Back to routine";
+
+  // Route the phone's Back button through the same handler instead of letting
+  // it exit the app.
+  useHardwareBack(true, handleBack);
 
   return (
     <>
@@ -450,6 +492,16 @@ Return ONLY this exact JSON structure, nothing else, no markdown, no explanation
       />
 
       <div className="w-full max-w-2xl mx-auto pb-24">
+        {/* Back control. Without this the only way out of the builder was the
+            phone's Back button, which fell through to exiting the whole app. */}
+        <button
+          onClick={handleBack}
+          className="mb-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400 hover:text-white transition-colors"
+        >
+          <ChevronLeft size={16} />
+          {backLabel}
+        </button>
+
         {/* Builder Mode Banner */}
         <div className="mb-6 border border-blue-900/40 bg-blue-950/40 p-4 rounded-2xl flex items-start gap-3">
           <AlertTriangle className="text-blue-500 mt-0.5 shrink-0" size={18} />

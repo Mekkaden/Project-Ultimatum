@@ -95,61 +95,79 @@ export function getLocalFlexibilityCampaign(): Campaign {
 
 export function getLocalCampaign(): Campaign {
   if (typeof window === "undefined") return applyMaxSetsRule(CAMPAIGN_5_DAY);
-  
-  // Check if user has an active edit override
-  const overrideCache = localStorage.getItem("ultimatum_campaign_override");
-  if (overrideCache) {
-    try {
-      const overrideCamp = JSON.parse(overrideCache);
-      return applyMaxSetsRule(overrideCamp);
-    } catch (e) {
-      // Fall through to default logic on parse error
-    }
-  }
 
   const savedFreq = localStorage.getItem("ultimatum_frequency");
   const savedDirective = localStorage.getItem("ultimatum_directive") || "hypertrophy";
   const savedGender = localStorage.getItem("ultimatum_gender") || "male";
-  let activeCampaign = CAMPAIGN_5_DAY;
 
-  if (savedDirective === "strength") {
-    if (savedFreq === "3-days") activeCampaign = CAMPAIGN_STRENGTH_3_DAY;
-    else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_STRENGTH_4_DAY;
-    else if (savedFreq === "6-days") activeCampaign = CAMPAIGN_STRENGTH_6_DAY;
-    else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
-  } else if (savedDirective === "calisthenics") {
-    if (savedFreq === "3-days") activeCampaign = CAMPAIGN_CALISTHENICS_3_DAY;
-    else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_CALISTHENICS_4_DAY;
-    else if (savedFreq === "6-days") activeCampaign = CAMPAIGN_CALISTHENICS_6_DAY;
-    else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
-  } else if (savedDirective === "hybrid") {
-    if (savedFreq === "4-days") activeCampaign = CAMPAIGN_HYBRID_4_DAY;
-    else if (savedFreq === "6-days") activeCampaign = CAMPAIGN_HYBRID_6_DAY;
-  } else {
-    // Hypertrophy
-    if (savedGender === "female") {
-      if (savedFreq === "3-days") activeCampaign = CAMPAIGN_FEMALE_3_DAY;
-      else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_FEMALE_4_DAY;
-      else if (savedFreq === "5-days") activeCampaign = CAMPAIGN_FEMALE_5_DAY;
+  /**
+   * Resolve which split the user selected, ignoring any manual edits.
+   * The override is validated against THIS so a stale override made on a
+   * previous split can never resurrect that split's days.
+   */
+  const resolveBaseCampaign = (): Campaign => {
+    let activeCampaign = CAMPAIGN_5_DAY;
+
+    if (savedDirective === "strength") {
+      if (savedFreq === "3-days") activeCampaign = CAMPAIGN_STRENGTH_3_DAY;
+      else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_STRENGTH_4_DAY;
+      else if (savedFreq === "6-days") activeCampaign = CAMPAIGN_STRENGTH_6_DAY;
       else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
+    } else if (savedDirective === "calisthenics") {
+      if (savedFreq === "3-days") activeCampaign = CAMPAIGN_CALISTHENICS_3_DAY;
+      else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_CALISTHENICS_4_DAY;
+      else if (savedFreq === "6-days") activeCampaign = CAMPAIGN_CALISTHENICS_6_DAY;
+      else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
+    } else if (savedDirective === "hybrid") {
+      if (savedFreq === "4-days") activeCampaign = CAMPAIGN_HYBRID_4_DAY;
+      else if (savedFreq === "6-days") activeCampaign = CAMPAIGN_HYBRID_6_DAY;
     } else {
-      if (savedFreq === "3-days") activeCampaign = CAMPAIGN_3_DAY;
-      else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_4_DAY;
-      else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
-    }
-  }
-
-  // If the active campaign is the custom stub, try to load the actual deployed custom split from cache
-  if (activeCampaign.id === "custom-code-split") {
-    const cachedCustom = localStorage.getItem("ultimatum_custom_campaign_cache");
-    if (cachedCustom) {
-      try {
-        activeCampaign = JSON.parse(cachedCustom);
-      } catch (e) {
-        // Fallback to stub if parsing fails
+      // Hypertrophy
+      if (savedGender === "female") {
+        if (savedFreq === "3-days") activeCampaign = CAMPAIGN_FEMALE_3_DAY;
+        else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_FEMALE_4_DAY;
+        else if (savedFreq === "5-days") activeCampaign = CAMPAIGN_FEMALE_5_DAY;
+        else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
+      } else {
+        if (savedFreq === "3-days") activeCampaign = CAMPAIGN_3_DAY;
+        else if (savedFreq === "4-days") activeCampaign = CAMPAIGN_4_DAY;
+        else if (savedFreq === "custom") activeCampaign = CAMPAIGN_CUSTOM;
       }
     }
+
+    // If the active campaign is the custom stub, load the deployed custom split
+    if (activeCampaign.id === "custom-code-split") {
+      const cachedCustom = localStorage.getItem("ultimatum_custom_campaign_cache");
+      if (cachedCustom) {
+        try {
+          activeCampaign = JSON.parse(cachedCustom);
+        } catch {
+          // Fallback to stub if parsing fails
+        }
+      }
+    }
+
+    return activeCampaign;
+  };
+
+  const baseCampaign = resolveBaseCampaign();
+
+  // Apply manual edits ONLY when they belong to the split currently selected.
+  // Overrides written before `campaignId` was recorded are dropped, because we
+  // cannot prove which split they came from — and a mismatched override is
+  // exactly what made "Train It" open the previous workout.
+  const overrideCache = localStorage.getItem("ultimatum_campaign_override");
+  if (overrideCache) {
+    try {
+      const overrideCamp = JSON.parse(overrideCache) as Campaign & { __campaignId?: string };
+      if (overrideCamp.__campaignId === baseCampaign.id) {
+        return applyMaxSetsRule(overrideCamp);
+      }
+      localStorage.removeItem("ultimatum_campaign_override");
+    } catch {
+      localStorage.removeItem("ultimatum_campaign_override");
+    }
   }
-  
-  return applyMaxSetsRule(activeCampaign);
+
+  return applyMaxSetsRule(baseCampaign);
 }

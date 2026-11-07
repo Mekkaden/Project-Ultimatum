@@ -219,7 +219,12 @@ function TrackPageContent() {
   };
 
   const saveEdits = () => {
-    localStorage.setItem("ultimatum_campaign_override", JSON.stringify(campaign));
+    // Stamp the campaign id so this override is only ever applied to the split
+    // it was actually made on (getLocalCampaign validates this).
+    localStorage.setItem(
+      "ultimatum_campaign_override",
+      JSON.stringify({ ...campaign, __campaignId: campaign?.id })
+    );
     setIsEditing(false);
   };
 
