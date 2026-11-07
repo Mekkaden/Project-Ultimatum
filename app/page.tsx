@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { hasLocalSession, useOfflineSession } from "../lib/useOfflineSession";
 import { motion, AnimatePresence } from "framer-motion";
 import DotField from "../components/DotField";
 import DecryptedText from "../components/DecryptedText";
-import TruthsSection from "../components/TruthsSection";
+// Only rendered in the "protocol" step, which is three screens past ENTER.
+// Code-splitting it keeps it out of the bundle that must run before the
+// landing screen is interactive.
+const TruthsSection = dynamic(() => import("../components/TruthsSection"), { ssr: false });
 import { ArrowLeft } from "lucide-react";
 import { useHardwareBack } from "../lib/useHardwareBack";
 import { ONBOARDING_STEP_KEY } from "../lib/onboarding";
@@ -185,12 +189,46 @@ export default function Home() {
   const router = useRouter();
   const { data: session, status, firebaseUser } = useOfflineSession();
 
-  // Preload all background images immediately on mount so transitions are instant
+  // Preload the onboarding backgrounds, but only AFTER the landing screen is
+  // interactive.
+  //
+  // These images (6.8 MB total, one of them 4.5 MB) belong to the gatekeeper and
+  // philosophy screens, which cannot appear until the user presses ENTER. Loading
+  // them on mount put ~7 MB of downloads in direct competition with the JS that
+  // has to run before the ENTER button is even tappable, which is most of the
+  // 8-10s cold-start delay.
+  //
+  // Deferring to idle keeps the transitions instant (they are still fetched well
+  // before the user reaches those screens) without blocking the first paint.
   useEffect(() => {
-    PRELOAD_IMAGES.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
+    let cancelled = false;
+
+    const preload = () => {
+      if (cancelled) return;
+      PRELOAD_IMAGES.forEach((src) => {
+        const img = new Image();
+        img.src = src;
+      });
+    };
+
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(preload, { timeout: 2500 });
+      return () => {
+        cancelled = true;
+        w.cancelIdleCallback?.(id);
+      };
+    }
+
+    const timer = setTimeout(preload, 1200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Auto-redirect ONLY verified (live Firebase) users to their last known

@@ -65,12 +65,39 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // If app loads online and there are pending items, sync them immediately
-    if (isOnline()) {
-      processSyncQueue();
+    // The startup sync is DEFERRED off the critical path.
+    //
+    // processSyncQueue() dynamically imports lib/syncService, which pulls in the
+    // entire Firestore SDK (~650 KB of JS). Running it on mount meant a cold
+    // launch had to download and parse the database client before the landing
+    // screen became interactive — a large part of the 8-10s delay before ENTER
+    // appeared. Nothing on the landing screen reads from Firestore.
+    //
+    // Waiting for idle (with a timeout so it still runs promptly) keeps the
+    // sync behaviour identical, just no longer ahead of first paint.
+    let cancelled = false;
+
+    const startSync = () => {
+      if (!cancelled && isOnline()) processSyncQueue();
+    };
+
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    let idleId: number | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (typeof w.requestIdleCallback === "function") {
+      idleId = w.requestIdleCallback(startSync, { timeout: 3000 });
+    } else {
+      timer = setTimeout(startSync, 1500);
     }
 
     return () => {
+      cancelled = true;
+      if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
+      if (timer !== undefined) clearTimeout(timer);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };

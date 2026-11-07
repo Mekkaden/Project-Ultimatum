@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase";
+import { auth, getDb } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -76,6 +76,7 @@ export async function saveUserSettingsToCloud(explicitUid?: string): Promise<voi
 
   console.log("[SAVE PROTOCOL] Keys to save:", Object.keys(data));
 
+  const db = await getDb();
   const userDocRef = doc(db, "users", uid);
   try {
     // Use setDoc with merge: true to act as an upsert (create if missing, update if exists)
@@ -112,6 +113,7 @@ export async function loadUserSettingsFromCloud(explicitUid?: string): Promise<n
   console.log("[FETCH PROTOCOL] Querying Firestore for UID:", uid);
 
   try {
+    const db = await getDb();
     const userDocRef = doc(db, "users", uid);
     const docSnap = await withRetry(() => getDoc(userDocRef), 3, 1000);
 
