@@ -13,6 +13,7 @@ import SleepInsightsModule from "@/components/SleepInsightsModule";
 import { calcLocalVolumeData, calcLocalChartData, calcLocalRecovery, calcLocalDietAlignment, calcLocalRecordsMatrix, calcLocalInsights, getLocalGoals, TrainingGoal, saveLocalGoal, deleteLocalGoal, MuscleRecovery } from "@/lib/local-analytics";
 import { InsightsGuideModal } from "@/components/InsightsGuideModal";
 import { Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const RECOVERY_TONE: Record<MuscleRecovery["status"], {
   card: string; label: string; value: string; title: string; text: string;
@@ -86,6 +87,29 @@ export default function TrainingInsightsPage() {
   const [goalReps, setGoalReps] = useState<number | "">(1);
 
   const [progressPhotos, setProgressPhotos] = useState<{ id: string, date: number, base64: string }[]>([]);
+  // Photo queued for deletion (shows the confirmation sheet).
+  const [pendingDeletePhotoId, setPendingDeletePhotoId] = useState<string | null>(null);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+
+  const cancelDeletePhoto = () => setPendingDeletePhotoId(null);
+
+  const confirmDeletePhoto = async (id: string) => {
+    setIsDeletingPhoto(true);
+    try {
+      const { deleteProgressPhoto } = await import("@/lib/db");
+      // Delete from storage FIRST. Updating the grid before the write succeeded
+      // made a failed delete look like it worked until the next reload, when the
+      // photo silently came back.
+      await deleteProgressPhoto(id);
+      setProgressPhotos((prev) => prev.filter((p) => p.id !== id));
+      setPendingDeletePhotoId(null);
+    } catch (e) {
+      console.error("[ProgressPhotos] delete failed:", e);
+      alert("Couldn't delete that photo. Please try again.");
+    } finally {
+      setIsDeletingPhoto(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -505,29 +529,72 @@ export default function TrainingInsightsPage() {
                       {progressPhotos.map((photo) => (
                         <div key={photo.id} className="relative group rounded-xl overflow-hidden aspect-[3/4] border border-neutral-800">
                           <img src={photo.base64} alt="Progress" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                          {/* Date is always visible. It used to be part of the
+                              hover-only overlay, so on a phone (no hover) neither
+                              the date nor the delete control could ever appear. */}
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-3 pb-2.5 pt-8 pointer-events-none">
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow">
                               {new Date(photo.date).toLocaleDateString()}
                             </span>
-                            <button 
-                              className="absolute top-2 right-2 p-2 bg-sky-600/80 text-white rounded-lg hover:bg-sky-500"
-                              onClick={() => {
-                                if (confirm("Delete this photo?")) {
-                                  const newPhotos = progressPhotos.filter(p => p.id !== photo.id);
-                                  setProgressPhotos(newPhotos);
-                                  import("@/lib/db")
-                                    .then(({ deleteProgressPhoto }) => deleteProgressPhoto(photo.id))
-                                    .catch(() => {});
-                                }
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
                           </div>
+                          <button
+                            type="button"
+                            aria-label={`Delete progress photo from ${new Date(photo.date).toLocaleDateString()}`}
+                            onClick={() => setPendingDeletePhotoId(photo.id)}
+                            className="absolute top-2 right-2 p-2.5 rounded-lg bg-black/65 backdrop-blur-sm border border-white/15 text-white/80 hover:text-white hover:bg-red-600 hover:border-red-500 active:scale-95 transition-all shadow-lg"
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* Delete confirmation. Rendered inside the Photos tab with a
+                      real button pair instead of window.confirm(), which some
+                      Android WebView builds suppress entirely. */}
+                  <AnimatePresence>
+                    {pendingDeletePhotoId && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[70] flex items-center justify-center p-6"
+                      >
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={cancelDeletePhoto} />
+                        <motion.div
+                          initial={{ scale: 0.95, y: 10 }}
+                          animate={{ scale: 1, y: 0 }}
+                          exit={{ scale: 0.95, y: 10 }}
+                          className="relative w-full max-w-xs bg-neutral-950 border border-neutral-800 rounded-2xl p-6 text-center"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-red-950/40 border border-red-900/50 flex items-center justify-center mx-auto mb-4">
+                            <Trash2 size={18} className="text-red-500" />
+                          </div>
+                          <h3 className="text-sm font-black uppercase tracking-widest text-white mb-2">Delete this photo?</h3>
+                          <p className="text-[11px] text-neutral-500 leading-relaxed mb-6">
+                            This permanently removes it from this device and cannot be undone.
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => confirmDeletePhoto(pendingDeletePhotoId)}
+                              disabled={isDeletingPhoto}
+                              className="w-full py-3 bg-red-600 text-white font-black uppercase tracking-widest text-[11px] rounded-xl disabled:opacity-60 active:scale-[0.98] transition-transform"
+                            >
+                              {isDeletingPhoto ? "Deleting…" : "Delete photo"}
+                            </button>
+                            <button
+                              onClick={cancelDeletePhoto}
+                              disabled={isDeletingPhoto}
+                              className="w-full py-3 border border-neutral-800 text-neutral-400 font-black uppercase tracking-widest text-[11px] rounded-xl disabled:opacity-60"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
