@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { montserrat } from "@/app/fonts";
 import { useRouter } from "next/navigation";
+import { useGoBack } from "@/lib/useGoBack";
 import { ArrowLeft, MessageCircleQuestion } from "lucide-react";
 import DecryptedText from "../../components/DecryptedText";
 
@@ -10,6 +11,7 @@ const faqs: { q: string; a: string; link?: string }[] = [];
 
 export default function FAQPage() {
   const router = useRouter();
+  const goBack = useGoBack("/settings");
 
   return (
     <div className={`min-h-screen bg-black text-white px-6 py-12 md:py-24 relative overflow-hidden ${montserrat.className}`}>
@@ -27,7 +29,7 @@ export default function FAQPage() {
           className="mb-12"
         >
           <button 
-            onClick={() => router.push("/settings")}
+            onClick={goBack}
             className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors mb-8 group"
           >
             <div className="p-2 rounded-full bg-neutral-900 border border-neutral-800 group-hover:bg-neutral-800 transition-colors">

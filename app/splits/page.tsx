@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useGoBack } from "@/lib/useGoBack";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Accessibility,
@@ -73,6 +74,7 @@ function splitTitle(split: SplitDescriptor): string {
 
 export default function SplitLibraryPage() {
   const router = useRouter();
+  const goBack = useGoBack("/campaign");
   const [tab, setTab] = useState<Tab>("resistance");
   const [activeIds, setActiveIds] = useState<{ resistance: string | null; flexibility: string | null }>({
     resistance: null,
@@ -126,7 +128,7 @@ export default function SplitLibraryPage() {
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 pb-24">
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => router.push("/campaign")}
+            onClick={goBack}
             className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
             aria-label="Back to campaign"
           >

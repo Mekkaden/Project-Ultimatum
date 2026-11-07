@@ -45,19 +45,11 @@ export default function CapacitorHardwareBackButton() {
               sessionStorage.setItem(LAST_EXIT_KEY, String(now));
             }
           } else {
-            // Guard against a history entry that resolves back onto itself
-            // (replace() chains leave these behind). Popping to the same URL
-            // does nothing visible, and a second press then exits the app —
-            // which is what felt like "randomly jumping out".
-            const before = window.history.length;
+            // Exactly one pop per press. Do NOT add a fallback navigation here:
+            // window.history.length is the stack SIZE, which does not shrink on
+            // back(), so any "did it move?" check based on it is always true and
+            // fires a second navigation — the "back skipped a screen" bug.
             router.back();
-            window.setTimeout(() => {
-              if (window.history.length === before) {
-                // Nothing moved; fall back to the home screen rather than
-                // leaving the press silently swallowed.
-                router.replace("/campaign");
-              }
-            }, 300);
           }
         });
 

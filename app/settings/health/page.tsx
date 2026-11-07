@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useGoBack } from "@/lib/useGoBack";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -32,6 +33,7 @@ type Summary = {
 
 export default function ConnectedHealthPage() {
   const router = useRouter();
+  const goBack = useGoBack("/settings");
   const [status, setStatus] = useState<HealthConnectStatus | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [busy, setBusy] = useState<"connect" | "sync" | "clear" | null>(null);
@@ -100,7 +102,7 @@ export default function ConnectedHealthPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <button
-            onClick={() => router.push("/settings")}
+            onClick={goBack}
             className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
             aria-label="Back to settings"
           >

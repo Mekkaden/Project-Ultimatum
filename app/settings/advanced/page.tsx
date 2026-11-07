@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useGoBack } from "@/lib/useGoBack";
 import { auth } from "@/lib/firebase";
 import { 
   LogOut, ChevronLeft, Download, Upload, CloudDownload,
@@ -38,6 +39,7 @@ import {
 
 export default function AdvancedSettingsPage() {
   const router = useRouter();
+  const goBack = useGoBack("/settings");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showLogoutWarning, setShowLogoutWarning] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -544,7 +546,7 @@ export default function AdvancedSettingsPage() {
           className="mb-8"
         >
           <button 
-            onClick={() => router.push("/settings")}
+            onClick={goBack}
             className="flex items-center gap-2 text-slate-400 mb-6 hover:text-white transition-colors"
           >
             <ChevronLeft size={16} />

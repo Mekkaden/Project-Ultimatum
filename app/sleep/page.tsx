@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useGoBack } from "@/lib/useGoBack";
 import { ChevronLeft, Zap, AlertTriangle, ShieldCheck, Moon, Sun, ThermometerSnowflake, Smartphone, BrainCircuit, Pill, Info, X } from "lucide-react";
 import { montserrat } from "@/app/fonts";
 import { useEffect, useState, useCallback } from "react";
@@ -19,6 +20,7 @@ type SleepLog = {
 
 export default function SleepAnalyticsPage() {
   const router = useRouter();
+  const goBack = useGoBack("/settings");
   
   const [history, setHistory] = useState<SleepLog[]>([]);
   const [status, setStatus] = useState<"LOCKED" | "COMPROMISED" | "DEBT" | "NO_DATA">("NO_DATA");
@@ -174,7 +176,7 @@ export default function SleepAnalyticsPage() {
           className="mb-8 flex items-center gap-4"
         >
           <button 
-            onClick={() => router.push("/settings")}
+            onClick={goBack}
             className="w-12 h-12 shrink-0 flex items-center justify-center bg-black/20 backdrop-blur-xl border border-sky-900/20 rounded-full text-sky-200/60 hover:text-sky-200 hover:bg-sky-900/10 transition-colors shadow-lg"
           >
             <ChevronLeft size={20} />

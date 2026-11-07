@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useGoBack } from "@/lib/useGoBack";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, PlayCircle, AlertTriangle, Heart, CheckCircle2, Dumbbell, ShieldCheck, Footprints, Info, ArrowUp, ArrowDown, Trash2, Edit3, Save, Plus, Calendar } from "lucide-react";
 import { getLocalCampaign, getLocalFlexibilityCampaign, SSR_CAMPAIGN_FALLBACK, SSR_FLEX_CAMPAIGN_FALLBACK } from "../../../lib/get-campaign";
@@ -23,6 +24,7 @@ const RestTimerNative = registerPlugin<any>('RestTimerNative');
 
 function TrackPageContent() {
   const router = useRouter();
+  const goBack = useGoBack("/campaign");
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode");
   const dayParam = searchParams.get("day");
@@ -118,23 +120,33 @@ function TrackPageContent() {
 
   // Foreground Service removed since user doesn't want the persistent tracking notification
 
-  // Intercept physical hardware back button (e.g. Android back button or iOS swipe back)
+  // Closing overlays on Back.
+  //
+  // The overlay opens by pushing a history entry, so the hardware handler's
+  // router.back() pops that entry and this listener closes the overlay — one
+  // press, one pop, one visible change. The modal is only ever closed from
+  // here (or by closeTracker), never by both at once.
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = () => {
+      // If a history entry belongs to an overlay, that press is spent on it.
+      // Do not close a second overlay with the same press.
       if (activeTrackingExercise) {
-        // Prevent navigation, close the modal instead
         setActiveTrackingExercise(null);
         loadDailySets();
-      } else if (activeFlexExercise) {
+        return;
+      }
+      if (activeFlexExercise) {
         setActiveFlexExercise(null);
-      } else if (showCalendar) {
+        return;
+      }
+      if (showCalendar) {
         setShowCalendar(false);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeTrackingExercise, loadDailySets]);
+  }, [activeTrackingExercise, activeFlexExercise, showCalendar, loadDailySets]);
 
   const openTracker = (ex: any) => {
     setActiveTrackingExercise(ex);
@@ -306,7 +318,7 @@ function TrackPageContent() {
         <div className="flex flex-col md:flex-row justify-between md:items-center p-4 gap-4 max-w-4xl mx-auto w-full">
           <div className="flex items-center justify-between w-full md:w-auto md:justify-start">
             <button 
-              onClick={() => router.push("/campaign")} 
+              onClick={goBack} 
               className="group flex items-center gap-1.5 px-3 py-1.5 bg-tracker-bg border border-tracker-border rounded-lg text-[10px] font-black tracking-widest uppercase text-tracker-text-soft hover:text-tracker-text-bold hover:bg-tracker-card hover:border-tracker-border transition-all shadow-sm"
             >
               <ChevronLeft size={14} strokeWidth={3} className="group-hover:-translate-x-0.5 transition-transform" />
