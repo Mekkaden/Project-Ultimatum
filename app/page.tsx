@@ -221,11 +221,19 @@ export default function Home() {
     }
 
     if (!hasLocalFreq) {
-      // Pre-sync from cloud if this device has no local settings yet
+      // No local settings yet, so the cloud copy is the only source. Kick the
+      // import off, but cap how long the launch waits on it: a cold Firestore
+      // round-trip used to hold the user on the landing screen with no visible
+      // progress. If it hasn't answered quickly we navigate anyway and let the
+      // import finish in the background — the campaign screen already resolves
+      // its own data and re-renders when the sync lands.
       (async () => {
         try {
           const { loadUserSettingsFromCloud } = await import("@/lib/syncService");
-          await loadUserSettingsFromCloud();
+          await Promise.race([
+            loadUserSettingsFromCloud(),
+            new Promise((resolve) => setTimeout(resolve, 1200)),
+          ]);
         } catch {}
         if (!cancelled) router.replace(targetRoute);
       })();

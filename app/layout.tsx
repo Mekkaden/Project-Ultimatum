@@ -29,6 +29,7 @@ import GlobalNav from "@/components/GlobalNav";
 import CapacitorHardwareBackButton from "@/components/CapacitorHardwareBackButton";
 import GlobalTimerModal from "@/components/GlobalTimerModal";
 import RouteTracker from "@/components/RouteTracker";
+import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 
 import { OfflineProvider } from "@/components/OfflineProvider";
 
@@ -45,11 +46,15 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <CapacitorHardwareBackButton />
         <OfflineProvider>
-          {children}
-          <InstallPrompt />
-          <GlobalNav />
-          <GlobalTimerModal />
-          <RouteTracker />
+          {/* Outermost safety net: a render error anywhere keeps the shell
+              alive and offers a recovery screen instead of blanking the app. */}
+          <GlobalErrorBoundary>
+            {children}
+            <InstallPrompt />
+            <GlobalNav />
+            <GlobalTimerModal />
+            <RouteTracker />
+          </GlobalErrorBoundary>
         </OfflineProvider>
       </body>
     </html>
