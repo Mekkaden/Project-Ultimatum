@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "248561857851",
+    "project_id": "ultimatum-212f2",
+    "storage_bucket": "ultimatum-212f2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:248561857851:android:17eca73a61e8aac7bab31e",
+        "android_client_info": {
+          "package_name": "com.ultimatum.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "248561857851-4uainclp5qrd3gqu8nag46led5h22l72.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7YmJ4aiDtLXFq9Qvu3geLogEpt8Qy6fg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "248561857851-4uainclp5qrd3gqu8nag46led5h22l72.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
