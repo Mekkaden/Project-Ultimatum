@@ -29,7 +29,7 @@ const ROUTE = {
   auth: "/auth",
 } as const;
 
-const NON_APP_ROUTES = ["/", "/auth", "/downloads", "/faq", "/privacy-policy", "/terms-of-service", "/delete-account"];
+const NON_APP_ROUTES = ["/", "/auth", "/downloads", "/faq", "/privacy", "/privacy-policy", "/terms-of-service", "/delete-account"];
 
 
 // Screens that only make sense right after onboarding. Restoring one of these

@@ -14,6 +14,7 @@ export default function RouteTracker() {
         "/auth",
         "/downloads",
         "/faq",
+        "/privacy",
         "/privacy-policy",
         "/terms-of-service",
         "/delete-account",

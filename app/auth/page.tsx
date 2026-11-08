@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Mail } from "lucide-react";
 import DecryptedText from "@/components/DecryptedText";
@@ -617,6 +618,15 @@ function AuthContent() {
             >
               SIGN OUT / USE ANOTHER ACCOUNT
             </button>
+
+            <div className="mt-4 pt-4 border-t border-zinc-800 text-center">
+              <Link
+                href="/privacy"
+                className="text-[11px] font-medium tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Privacy &amp; Terms
+              </Link>
+            </div>
           </div>
         </motion.div>
       ) : (
@@ -758,6 +768,15 @@ function AuthContent() {
                 Return to SIGN IN
               </button>
             )}
+          </div>
+
+          <div className="mt-8 pt-4 border-t border-white/10 text-center">
+            <Link
+              href="/privacy"
+              className="text-[11px] font-medium tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Privacy &amp; Terms
+            </Link>
           </div>
         </motion.div>
       )}

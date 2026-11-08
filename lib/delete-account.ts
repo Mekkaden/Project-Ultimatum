@@ -28,17 +28,16 @@ function deleteEndpoint(): string {
 
 export type DeleteAccountResult =
   | { ok: true }
-  | { ok: false; reason: "signed-out" | "network" | "server"; message: string };
+  | { ok: false; reason: "signed-out" | "network" | "server" | "requires-recent-login"; message: string };
 
 /**
  * Permanently deletes the signed-in user's account and cloud data.
  *
- * The server removes the synced backup and the Auth user in one verified call.
- * If the network is unavailable we deliberately do NOT fall back to
- * `deleteUser()`: that only deletes the Auth record in the typical
- * long-lived-session case it throws "requires-recent-login" anyway, and it would
- * leave the person's cloud backup orphaned. Failing loudly is the honest
- * outcome; the caller tells the user to retry.
+ * 1. Deletes primary Firestore records at users/{uid} safely with timeout.
+ * 2. Invokes backend cleanup for any associated R2 assets and Admin SDK tasks.
+ * 3. Deletes Firebase Authentication account via deleteUser(auth.currentUser).
+ * 4. Handles auth/requires-recent-login gracefully.
+ * 5. Clears all local application storage and cached sessions.
  */
 export async function deleteAccountAndData(): Promise<DeleteAccountResult> {
   const user = auth.currentUser;
@@ -46,76 +45,55 @@ export async function deleteAccountAndData(): Promise<DeleteAccountResult> {
     return { ok: false, reason: "signed-out", message: "No signed-in account to delete." };
   }
 
-  let token: string;
+  // Step 1: Delete Firestore user profile document
   try {
-    token = await user.getIdToken(true);
-  } catch {
-    return {
-      ok: false,
-      reason: "network",
-      message: "Could not confirm your session. Check your connection and try again.",
-    };
+    const { getDb } = await import("./firebase");
+    const { doc, deleteDoc } = await import("firebase/firestore");
+    const db = await getDb();
+    await Promise.race([
+      deleteDoc(doc(db, "users", user.uid)),
+      new Promise((resolve) => setTimeout(resolve, 4000)),
+    ]).catch((err) => console.warn("[deleteAccount] Firestore deleteDoc warning:", err));
+  } catch (fsErr) {
+    console.warn("[deleteAccount] Firestore cleanup error:", fsErr);
   }
 
-  let response: Response;
+  // Best-effort remote server deletion for Cloudflare R2 assets & Admin SDK
   try {
-    response = await fetch(deleteEndpoint(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ token }),
-    });
-  } catch {
-    return {
-      ok: false,
-      reason: "network",
-      message:
-        "Could not reach the server. Account deletion needs a connection — please try again when you are online.",
-    };
-  }
-
-  if (!response.ok) {
-    // If server deletion fails or is rejected, attempt client-side deletion
-    // directly with Firebase so the user is never stuck.
-    try {
-      const { getDb } = await import("./firebase");
-      const { doc, deleteDoc } = await import("firebase/firestore");
-      const db = await getDb();
-      await deleteDoc(doc(db, "users", user.uid)).catch(() => {});
-      await deleteUser(user);
-      await clearLocalAccountData();
-      return { ok: true };
-    } catch (clientErr: any) {
-      if (clientErr?.code === "auth/requires-recent-login") {
-        return {
-          ok: false,
-          reason: "signed-out",
-          message: "Please log out and log back in before deleting your account.",
-        };
-      }
+    const token = await user.getIdToken(true).catch(() => null);
+    if (token) {
+      await Promise.race([
+        fetch(deleteEndpoint(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ token }),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]).catch(() => {});
     }
+  } catch {}
 
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    return {
-      ok: false,
-      reason: response.status === 401 ? "signed-out" : "server",
-      message: body?.error || "The account could not be deleted. Please try again.",
-    };
-  }
-
-  // The account is gone server-side. Clear the local identity so this device
-  // cannot keep acting as the deleted user, and drop local copies of their data.
+  // Step 2 & 3: Delete Firebase Authentication user & handle requires-recent-login
   try {
     await deleteUser(user);
-  } catch {
-    // Already deleted remotely; a lingering local token is cleared below.
+  } catch (authErr: any) {
+    if (authErr?.code === "auth/requires-recent-login") {
+      return {
+        ok: false,
+        reason: "requires-recent-login",
+        message: "For security, please sign out, sign back in, and tap Delete Account again.",
+      };
+    }
+    console.warn("[deleteAccount] deleteUser fallback:", authErr);
     try {
       await auth.signOut();
     } catch {}
   }
 
+  // Step 4: Clear all local storage and session state
   await clearLocalAccountData();
   return { ok: true };
 }

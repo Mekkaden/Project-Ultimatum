@@ -7,7 +7,7 @@ import {
   BookOpen, Settings as SettingsIcon, LogOut, ChevronRight, User, 
   Heart, Moon, Cloud, Mail, Download, Upload, CloudDownload, Swords, 
   Activity, Shield, FileText, Play, CheckCircle2,
-  Footprints, RotateCcw, Dumbbell, HeartPulse
+  Footprints, RotateCcw, Dumbbell, HeartPulse, Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { montserrat } from "@/app/fonts";
@@ -22,6 +22,40 @@ export default function SettingsPage() {
   const [stepInput, setStepInput] = useState<string>("");
   const [showDirectiveWarning, setShowDirectiveWarning] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    if (isDeletingAccount) return;
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      const { deleteAccountAndData } = await import("@/lib/delete-account");
+      const result = await deleteAccountAndData();
+      if (!result.ok) {
+        setDeleteError(result.message);
+        setIsDeletingAccount(false);
+        if (result.reason === "requires-recent-login") {
+          setTimeout(() => {
+            router.push("/auth");
+          }, 2000);
+        }
+        return;
+      }
+      router.replace("/auth");
+    } catch (error: any) {
+      if (error?.code === "auth/requires-recent-login") {
+        setDeleteError("For security, please sign out, sign back in, and tap Delete Account again.");
+        setTimeout(() => {
+          router.push("/auth");
+        }, 2000);
+      } else {
+        setDeleteError(error instanceof Error ? error.message : "The account could not be deleted.");
+      }
+      setIsDeletingAccount(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -275,9 +309,81 @@ export default function SettingsPage() {
           <ActionRow delay={0.42} title="Movement Database" subtitle="Exercise library & custom movements" icon={Activity} onClick={() => router.push("/settings/exercises")} />
           <ActionRow delay={0.44} title="Connected Health" subtitle="Health Connect, bands & watches" icon={HeartPulse} onClick={() => router.push("/settings/health")} />
           <ActionRow delay={0.45} title="System Config" subtitle="Backup & Policies" icon={SettingsIcon} onClick={() => router.push("/settings/advanced")} />
+          <ActionRow
+            delay={0.48}
+            title="DELETE ACCOUNT"
+            subtitle="Permanently erase account and data"
+            icon={Trash2}
+            onClick={() => {
+              setDeleteError(null);
+              setShowDeleteAccount(true);
+            }}
+            isDestructive
+          />
+        </div>
+
+        {/* Privacy & Terms Link */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/privacy"
+            className="text-[11px] font-medium tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Privacy &amp; Terms
+          </Link>
         </div>
 
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAccount && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl shadow-black"
+            >
+              <div className="w-11 h-11 rounded-xl bg-red-950/40 flex items-center justify-center mb-4 border border-red-900/40">
+                <Trash2 size={18} className="text-red-400" />
+              </div>
+
+              <h2 className="text-base font-bold uppercase tracking-wider text-white mb-2">
+                PERMANENTLY DELETE ACCOUNT?
+              </h2>
+              <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
+                This will permanently erase your identity, workout logs, nutrition history, and profile data. This action cannot be undone.
+              </p>
+
+              {deleteError && (
+                <p className="text-[11px] text-red-400 mb-4 leading-relaxed font-medium">{deleteError}</p>
+              )}
+
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => setShowDeleteAccount(false)}
+                  disabled={isDeletingAccount}
+                  className="flex-1 py-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 hover:text-neutral-200 font-bold tracking-wider text-[11px] transition-colors disabled:opacity-50 border border-white/10"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                  className="flex-1 py-3 rounded-xl bg-red-950/60 hover:bg-red-900/70 text-red-300 hover:text-red-200 font-bold tracking-wider text-[11px] transition-colors border border-red-900/50 disabled:opacity-35 disabled:cursor-not-allowed"
+                >
+                  {isDeletingAccount ? "DELETING…" : "CONFIRM DELETE"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Directive Change Warning Modal */}
       <AnimatePresence>

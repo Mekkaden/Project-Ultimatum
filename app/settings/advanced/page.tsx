@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useGoBack } from "@/lib/useGoBack";
 import { auth } from "@/lib/firebase";
 import { 
@@ -451,13 +452,24 @@ export default function AdvancedSettingsPage() {
       if (!result.ok) {
         setDeleteError(result.message);
         setIsDeletingAccount(false);
+        if (result.reason === "requires-recent-login") {
+          setTimeout(() => {
+            router.push("/auth");
+          }, 2000);
+        }
         return;
       }
-      // The account is gone; leave the app at the landing screen so nothing
-      // can act as the deleted user.
-      window.location.href = "/";
-    } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : "The account could not be deleted.");
+      // Successful deletion -> redirect to /auth
+      router.replace("/auth");
+    } catch (error: any) {
+      if (error?.code === "auth/requires-recent-login") {
+        setDeleteError("For security, please sign out, sign back in, and tap Delete Account again.");
+        setTimeout(() => {
+          router.push("/auth");
+        }, 2000);
+      } else {
+        setDeleteError(error instanceof Error ? error.message : "The account could not be deleted.");
+      }
       setIsDeletingAccount(false);
     }
   };
@@ -682,41 +694,15 @@ export default function AdvancedSettingsPage() {
                 <Trash2 size={18} className="text-red-400" />
               </div>
 
-              <h2 className="text-base font-bold uppercase tracking-wider text-white mb-2">Delete Account</h2>
-              <p className="text-xs text-neutral-400 mb-4 leading-relaxed">
-                This permanently deletes your account and everything stored for it: your synced settings,
-                custom splits, workout history, nutrition targets and progress photos. It cannot be undone.
+              <h2 className="text-base font-bold uppercase tracking-wider text-white mb-2">
+                PERMANENTLY DELETE ACCOUNT?
+              </h2>
+              <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
+                This will permanently erase your identity, workout logs, nutrition history, and profile data. This action cannot be undone.
               </p>
 
-              <div className="mb-5 p-3 rounded-xl bg-white/[0.03] border border-white/10">
-                <p className="text-[10px] text-neutral-500 mb-3 leading-relaxed">
-                  Want to keep a copy? Export your data first — this also ends your session.
-                </p>
-                <button
-                  onClick={handleExportData}
-                  className="w-full py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-neutral-200 hover:text-white border border-white/15 font-bold tracking-wider text-[10px] transition-colors flex items-center justify-center gap-2"
-                >
-                  <Download size={13} className="text-neutral-400" />
-                  EXPORT JSON
-                </button>
-              </div>
-
-              <label htmlFor="delete-confirm" className="block text-[10px] font-bold uppercase tracking-wider text-neutral-500 mb-2">
-                Type DELETE to confirm
-              </label>
-              <input
-                id="delete-confirm"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                disabled={isDeletingAccount}
-                autoComplete="off"
-                autoCapitalize="characters"
-                placeholder="DELETE"
-                className="w-full mb-4 px-3 py-2.5 rounded-xl bg-black border border-white/15 text-white text-sm tracking-widest text-center outline-none focus:border-red-500/60 transition-colors disabled:opacity-50"
-              />
-
               {deleteError && (
-                <p className="text-[11px] text-red-400 mb-4 leading-relaxed">{deleteError}</p>
+                <p className="text-[11px] text-red-400 mb-4 leading-relaxed font-medium">{deleteError}</p>
               )}
 
               <div className="flex gap-2.5">
@@ -729,16 +715,26 @@ export default function AdvancedSettingsPage() {
                 </button>
                 <button
                   onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount || deleteConfirmText.trim().toUpperCase() !== "DELETE"}
+                  disabled={isDeletingAccount}
                   className="flex-1 py-3 rounded-xl bg-red-950/60 hover:bg-red-900/70 text-red-300 hover:text-red-200 font-bold tracking-wider text-[11px] transition-colors border border-red-900/50 disabled:opacity-35 disabled:cursor-not-allowed"
                 >
-                  {isDeletingAccount ? "DELETING…" : "DELETE"}
+                  {isDeletingAccount ? "DELETING…" : "CONFIRM DELETE"}
                 </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Privacy & Terms link */}
+      <div className="mt-12 text-center relative z-10">
+        <Link
+          href="/privacy"
+          className="text-[11px] font-medium tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          Privacy &amp; Terms
+        </Link>
+      </div>
     </div>
   );
 }

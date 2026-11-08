@@ -21,6 +21,7 @@ export const NON_TAB_APP_ROUTES = [
   "/campaign/track",
   "/downloads",
   "/faq",
+  "/privacy",
   "/privacy-policy",
   "/terms-of-service",
   "/delete-account",
