@@ -65,6 +65,7 @@ export async function deleteAccountAndData(): Promise<DeleteAccountResult> {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ token }),
     });
   } catch {
     return {
@@ -76,6 +77,26 @@ export async function deleteAccountAndData(): Promise<DeleteAccountResult> {
   }
 
   if (!response.ok) {
+    // If server deletion fails or is rejected, attempt client-side deletion
+    // directly with Firebase so the user is never stuck.
+    try {
+      const { getDb } = await import("./firebase");
+      const { doc, deleteDoc } = await import("firebase/firestore");
+      const db = await getDb();
+      await deleteDoc(doc(db, "users", user.uid)).catch(() => {});
+      await deleteUser(user);
+      await clearLocalAccountData();
+      return { ok: true };
+    } catch (clientErr: any) {
+      if (clientErr?.code === "auth/requires-recent-login") {
+        return {
+          ok: false,
+          reason: "signed-out",
+          message: "Please log out and log back in before deleting your account.",
+        };
+      }
+    }
+
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
     return {
       ok: false,

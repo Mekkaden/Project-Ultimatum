@@ -42,15 +42,40 @@ async function deleteAccount(uid: string): Promise<void> {
 }
 
 export async function POST(req: Request) {
-  const user = await getServerUser(req);
-  if (!user?.id) {
+  let token: string | null = null;
+
+  // 1. Try reading from Authorization header (case-insensitive)
+  const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    token = authHeader.slice(7).trim();
+  }
+
+  // 2. Fallback to reading token from JSON body (handles static-export environments where headers are stripped)
+  if (!token) {
+    try {
+      const body = await req.json();
+      token = body?.token || body?.idToken || null;
+    } catch {}
+  }
+
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let uid: string;
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    uid = decodedToken.uid;
+  } catch (error) {
+    console.error("[delete-account] Token verification failed:", error);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    await deleteAccount(user.id);
+    await deleteAccount(uid);
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("[delete-account] Deletion failed:", error);
     return NextResponse.json(
       { error: "The account could not be deleted. Please try again." },
       { status: 500 },
