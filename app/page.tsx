@@ -55,13 +55,19 @@ function detectLaunchState(): void {
       Capacitor?: {
         Plugins?: Record<
           string,
-          { getLaunchState?: () => { restoring?: boolean } }
+          { getLaunchState?: () => Promise<{ restoring?: boolean }> | { restoring?: boolean } }
         >;
       };
     }).Capacitor?.Plugins?.RestTimerNative;
     const result = plugin?.getLaunchState?.();
-    if (result && typeof result.restoring === "boolean") {
-      launchWasCold = !result.restoring;
+    if (result && typeof (result as any).then === "function") {
+      (result as Promise<{ restoring?: boolean }>).then((res) => {
+        if (res && typeof res.restoring === "boolean") {
+          launchWasCold = !res.restoring;
+        }
+      });
+    } else if (result && typeof (result as any).restoring === "boolean") {
+      launchWasCold = !(result as any).restoring;
     }
   } catch {}
 }
@@ -384,12 +390,10 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntering, status, router]);
 
-  // A signed-in user is being handed to their last screen. Painting the
-  // landing page here for even one frame is the flash that made an in-app
-  // reload look like a sign-out, so the screen stays blank (black, not an empty
-  // page) until the hand-off happens. It never applies to a real launch: those
-  // have no session yet, so this is false and the landing page renders at once.
-  if (resumingSession && status === "loading") {
+  // Only keep the screen blank if an Activity rebuild is actively resuming a saved screen under the user.
+  // A fresh launch (from closed/recents) must ALWAYS render the landing screen and ENTER button immediately.
+  const isActivelyResuming = launchWasCold === false && !!resumeRouteOnlyWhenResuming();
+  if (isActivelyResuming && status === "loading") {
     return <main className="fixed inset-0 bg-black" aria-busy="true" />;
   }
 

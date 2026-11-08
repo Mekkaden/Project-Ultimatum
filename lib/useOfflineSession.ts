@@ -6,7 +6,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { isUserAllowedIn } from "./authHelper";
 
 const SESSION_CACHE_KEY = "ultimatum_cached_session";
-const OFFLINE_TIMEOUT_MS = 8000; // Give Firebase 8s to restore session before giving up
+const OFFLINE_TIMEOUT_MS = 2500; // Cap background Firebase restore fallback so offline launches never hang
 // A returning user who was signed in when they closed the app. Set on a
 // confirmed login and on every confirmed sign-out, so it never contradicts the
 // cached session and never turns a signed-out user into a signed-in one.
@@ -165,16 +165,26 @@ export function useOfflineSession() {
   // fresh as the last time it was written (an ID token lasts an hour). Re-check
   // it quietly in the background; if it can no longer be renewed, Firebase says
   // so through onAuthStateChanged or refreshToken throws, and we fall back to
-  // signed-out. Either way the grace below stops holding the cached view open
-  // for longer than a moment.
+  // signed-out.
   useEffect(() => {
     if (!returningSession) return;
     const timer = setTimeout(() => setReconcileSettled(true), RECONCILE_GRACE_MS);
     let cancelled = false;
     (async () => {
       try {
+        if (typeof (auth as any).authStateReady === "function") {
+          await Promise.race([
+            (auth as any).authStateReady(),
+            new Promise((resolve) => setTimeout(resolve, RECONCILE_GRACE_MS)),
+          ]);
+        }
         const user = auth.currentUser;
-        if (user && !isUserAllowedIn(user)) {
+        if (!user) {
+          // Firebase is still restoring auth state; do not unflag here.
+          // onAuthStateChanged will handle the definitive state.
+          return;
+        }
+        if (!isUserAllowedIn(user)) {
           writeSessionFlag(false);
           if (isOnline()) {
             localStorage.removeItem(SESSION_CACHE_KEY);
@@ -183,7 +193,7 @@ export function useOfflineSession() {
           if (!cancelled) setReconcileSettled(true);
           return;
         }
-        const token = await user?.getIdToken(true);
+        const token = await user.getIdToken(true);
         if (cancelled) return;
         const cached = readCachedSession();
         if (user && token && cached) {
@@ -197,7 +207,7 @@ export function useOfflineSession() {
             );
           } catch {}
         }
-        writeSessionFlag(!!user);
+        writeSessionFlag(true);
       } catch {
         // Offline, or the session was revoked: let Firebase's listener decide.
       } finally {
@@ -272,7 +282,7 @@ export function useOfflineSession() {
   // timed out. A definitive "unauthenticated" online answer always wins, and so
   // does a returning user's cached session: the app opens on it straight away
   // and Firebase's answer takes over the moment it arrives.
-  const cacheUsable = status === "loading" && (timedOut || (returningSession && !reconcileSettled));
+  const cacheUsable = status === "loading" && (timedOut || returningSession);
   const finalStatus =
     (isOffline || cacheUsable) && hasCachedUser && !firebaseUser
       ? "authenticated"
