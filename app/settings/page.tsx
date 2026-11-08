@@ -7,7 +7,7 @@ import {
   BookOpen, Settings as SettingsIcon, LogOut, ChevronRight, User, 
   Heart, Moon, Cloud, Mail, Download, Upload, CloudDownload, Swords, 
   Activity, Shield, FileText, Play, CheckCircle2,
-  Footprints, RotateCcw, Dumbbell, HeartPulse, Trash2
+  Footprints, RotateCcw, Dumbbell, HeartPulse, Trash
 } from "lucide-react";
 import Link from "next/link";
 import { montserrat } from "@/app/fonts";
@@ -313,7 +313,7 @@ export default function SettingsPage() {
             delay={0.48}
             title="DELETE ACCOUNT"
             subtitle="Permanently erase account and data"
-            icon={Trash2}
+            icon={Trash}
             onClick={() => {
               setDeleteError(null);
               setShowDeleteAccount(true);
@@ -349,8 +349,8 @@ export default function SettingsPage() {
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl shadow-black"
             >
-              <div className="w-11 h-11 rounded-xl bg-red-950/40 flex items-center justify-center mb-4 border border-red-900/40">
-                <Trash2 size={18} className="text-red-400" />
+              <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center mb-4 border border-white/10">
+                <Trash size={18} className="text-white/80" />
               </div>
 
               <h2 className="text-base font-bold uppercase tracking-wider text-white mb-2">

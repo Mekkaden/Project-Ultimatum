@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, Shield, AlertTriangle, Trash2, Mail, Lock, HeartPulse } from "lucide-react";
+import { ChevronLeft, Shield, AlertTriangle, Trash, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { montserrat } from "@/app/fonts";
 
-const SUPPORT_EMAIL = "kfcchicken123321@gmail.com";
+const SUPPORT_EMAIL = "projectultimatum07@gmail.com";
 const LAST_UPDATED = "November 8, 2026";
 
 export default function PrivacyPage() {
@@ -99,9 +99,9 @@ export default function PrivacyPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-14 bg-zinc-950 border border-zinc-900 rounded-3xl p-8 md:p-10 shadow-2xl"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-              <Lock size={18} className="text-zinc-300" />
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <Shield size={18} className="text-zinc-300" />
             </div>
             <div>
               <h2 className="text-lg md:text-xl font-bold uppercase tracking-[0.15em] text-white">
@@ -167,9 +167,9 @@ export default function PrivacyPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mb-14 bg-zinc-950 border border-zinc-900 rounded-3xl p-8 md:p-10 shadow-2xl"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-amber-950/40 border border-amber-900/50 flex items-center justify-center">
-              <HeartPulse size={18} className="text-amber-400" />
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <AlertTriangle size={18} className="text-amber-400/90" />
             </div>
             <div>
               <h2 className="text-lg md:text-xl font-bold uppercase tracking-[0.15em] text-white">
@@ -197,9 +197,9 @@ export default function PrivacyPage() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mb-14 bg-zinc-950 border border-zinc-900 rounded-3xl p-8 md:p-10 shadow-2xl scroll-mt-20"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-red-950/40 border border-red-900/50 flex items-center justify-center">
-              <Trash2 size={18} className="text-red-400" />
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <Trash size={18} className="text-zinc-300" />
             </div>
             <div>
               <h2 className="text-lg md:text-xl font-bold uppercase tracking-[0.15em] text-white">
@@ -324,8 +324,8 @@ export default function PrivacyPage() {
           transition={{ duration: 0.5, delay: 0.4 }}
           className="bg-zinc-950 border border-zinc-900 rounded-3xl p-8 md:p-10 shadow-2xl text-center"
         >
-          <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
-            <Mail size={20} className="text-zinc-300" />
+          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+            <Mail size={18} className="text-zinc-300" />
           </div>
           <h2 className="text-lg md:text-xl font-bold uppercase tracking-[0.15em] text-white mb-2">
             4. Contact Support

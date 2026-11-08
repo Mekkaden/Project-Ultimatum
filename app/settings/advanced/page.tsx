@@ -9,7 +9,7 @@ import { useGoBack } from "@/lib/useGoBack";
 import { auth } from "@/lib/firebase";
 import { 
   LogOut, ChevronLeft, Download, Upload, CloudDownload,
-  Shield, FileText, Bell, BellOff, Trash2
+  Shield, FileText, Bell, BellOff, Trash
 } from "lucide-react";
 import { cancelAllNotifications, requestNotificationPermissions, scheduleDailyReminders } from "@/lib/notifications";
 import { montserrat } from "@/app/fonts";
@@ -609,7 +609,7 @@ export default function AdvancedSettingsPage() {
             delay={0.45}
             title="Delete Account"
             subtitle="Permanently delete your account and data"
-            icon={Trash2}
+            icon={Trash}
             onClick={() => {
               setDeleteConfirmText("");
               setDeleteError(null);
@@ -690,8 +690,8 @@ export default function AdvancedSettingsPage() {
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl shadow-black"
             >
-              <div className="w-11 h-11 rounded-xl bg-red-950/40 flex items-center justify-center mb-4 border border-red-900/40">
-                <Trash2 size={18} className="text-red-400" />
+              <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center mb-4 border border-white/10">
+                <Trash size={18} className="text-white/80" />
               </div>
 
               <h2 className="text-base font-bold uppercase tracking-wider text-white mb-2">

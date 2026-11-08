@@ -35,6 +35,12 @@ export const HIDDEN_NAV_ROUTES = [
   "/setup-mode",
   "/auto-setup",
   "/manual-nutrition",
+  "/privacy",
+  "/privacy-policy",
+  "/terms-of-service",
+  "/delete-account",
+  "/faq",
+  "/downloads",
 ];
 
 export function isPrimaryTab(pathname: string): boolean {

@@ -19,7 +19,7 @@ import { montserrat } from "@/app/fonts";
  * destroy someone else's account. Requests are verified against the account
  * owner before anything is removed.
  */
-const SUPPORT_EMAIL = "support@ultimatum.website";
+const SUPPORT_EMAIL = "projectultimatum07@gmail.com";
 
 const DELETED_ITEMS = [
   "Your account and sign-in details (email address and password)",
