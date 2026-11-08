@@ -44,17 +44,19 @@ function AuthContent() {
   const [checkingVerification, setCheckingVerification] = useState(false);
   const [verifyFeedback, setVerifyFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // If a logged-in user fails isUserAllowedIn check, direct them to verification screen
+  // Auto-redirect allowed users into the app, or direct unverified users to verification screen
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user && !isUserAllowedIn(user)) {
+      if (user && isUserAllowedIn(user)) {
+        router.replace("/campaign");
+      } else if (user && !isUserAllowedIn(user)) {
         setSignedIn(false);
         setVerificationEmail(user.email || "");
         setMode("verify_email");
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   // Cooldown timer tick down
   useEffect(() => {
@@ -131,11 +133,7 @@ function AuthContent() {
   };
 
   const leaveAuthAfterSignup = () => {
-    if (mode === "signup") {
-      window.history.replaceState(window.history.state, "", "/campaign");
-    } else {
-      router.replace("/campaign");
-    }
+    router.replace("/campaign");
   };
 
   const confirmOverride = async () => {
@@ -333,7 +331,17 @@ function AuthContent() {
       }
 
       const uid = user.uid;
-      const exists = await checkUserProfileExists(uid);
+
+      // Safe check if profile exists (capped at 3s so it never hangs)
+      let exists = false;
+      try {
+        exists = await Promise.race([
+          checkUserProfileExists(uid),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+        ]);
+      } catch (checkErr) {
+        console.warn("[auth] Profile check skipped/errored:", checkErr);
+      }
 
       const pendingFreq = sessionStorage.getItem("pending_frequency");
       const existingFreq = localStorage.getItem("ultimatum_frequency");
@@ -356,12 +364,15 @@ function AuthContent() {
           } catch (_) {}
         }
 
-        const { loadUserSettingsFromCloud } = await import("@/lib/syncService");
         try {
-          await loadUserSettingsFromCloud(uid);
+          const { loadUserSettingsFromCloud } = await import("@/lib/syncService");
+          await Promise.race([
+            loadUserSettingsFromCloud(uid),
+            new Promise((resolve) => setTimeout(resolve, 3000)),
+          ]);
           clearCloudSyncWarning();
         } catch (err) {
-          console.error("[auth] Google login hydration failed:", err);
+          console.warn("[auth] Google login hydration failed:", err);
           flagCloudSyncWarning();
         }
       } else {
@@ -371,10 +382,13 @@ function AuthContent() {
           clearPendingSetup();
         }
         try {
-          await persistToCloud(uid);
+          await Promise.race([
+            persistToCloud(uid),
+            new Promise((resolve) => setTimeout(resolve, 3000)),
+          ]);
           clearCloudSyncWarning();
         } catch (saveErr) {
-          console.error("[auth] Google signup cloud save failed:", saveErr);
+          console.warn("[auth] Google signup cloud save failed:", saveErr);
           flagCloudSyncWarning();
         }
       }
@@ -392,6 +406,7 @@ function AuthContent() {
       localStorage.setItem("ultimatum_session_active", "1");
 
       leaveAuthAfterSignup();
+      router.replace("/campaign");
     } catch (err: any) {
       console.error("[auth] Google sign-in error:", err);
       if (err.code === "auth/account-exists-with-different-credential") {

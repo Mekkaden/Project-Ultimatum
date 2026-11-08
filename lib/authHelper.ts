@@ -68,7 +68,16 @@ export async function signInWithGoogle(): Promise<UserCredential> {
     const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
     const result = await FirebaseAuthentication.signInWithGoogle();
 
-    const idToken = result.credential?.idToken;
+    let idToken = result.credential?.idToken || (result as any)?.idToken;
+    if (!idToken) {
+      try {
+        const tokenRes = await FirebaseAuthentication.getIdToken();
+        idToken = tokenRes.token;
+      } catch (tokenErr) {
+        console.warn("[authHelper] Could not retrieve ID token via getIdToken:", tokenErr);
+      }
+    }
+
     if (!idToken) {
       throw new Error("No Google ID token received from native sign-in.");
     }
