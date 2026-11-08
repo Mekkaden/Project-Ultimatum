@@ -14,6 +14,7 @@ const TruthsSection = dynamic(() => import("../components/TruthsSection"), { ssr
 import { ArrowLeft } from "lucide-react";
 import { useHardwareBack } from "../lib/useHardwareBack";
 import { ONBOARDING_STEP_KEY } from "../lib/onboarding";
+import { isUserAllowedIn } from "../lib/authHelper";
 
 // All background images used across onboarding steps — preloaded on mount
 const PRELOAD_IMAGES = [
@@ -239,6 +240,7 @@ export default function Home() {
   // opened the app straight into builder mode after a reinstall.
   useEffect(() => {
     if (!firebaseUser) return;
+    if (!isUserAllowedIn(firebaseUser)) return;
     if (!resumeRouteOnlyWhenResuming()) return;
 
     let cancelled = false;

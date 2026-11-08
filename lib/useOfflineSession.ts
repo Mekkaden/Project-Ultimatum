@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
+import { isUserAllowedIn } from "./authHelper";
 
 const SESSION_CACHE_KEY = "ultimatum_cached_session";
 const OFFLINE_TIMEOUT_MS = 8000; // Give Firebase 8s to restore session before giving up
@@ -173,6 +174,15 @@ export function useOfflineSession() {
     (async () => {
       try {
         const user = auth.currentUser;
+        if (user && !isUserAllowedIn(user)) {
+          writeSessionFlag(false);
+          if (isOnline()) {
+            localStorage.removeItem(SESSION_CACHE_KEY);
+            setCachedSession(null);
+          }
+          if (!cancelled) setReconcileSettled(true);
+          return;
+        }
         const token = await user?.getIdToken(true);
         if (cancelled) return;
         const cached = readCachedSession();
@@ -204,6 +214,18 @@ export function useOfflineSession() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        if (!isUserAllowedIn(user)) {
+          setFirebaseUser(user);
+          setIdToken(null);
+          setStatus("unauthenticated");
+          writeSessionFlag(false);
+          if (isOnline()) {
+            localStorage.removeItem(SESSION_CACHE_KEY);
+            setCachedSession(null);
+          }
+          return;
+        }
+
         try {
           const token = await user.getIdToken();
           setIdToken(token);

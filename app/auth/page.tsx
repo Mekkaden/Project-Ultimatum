@@ -1,29 +1,29 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Mail } from "lucide-react";
 import DecryptedText from "@/components/DecryptedText";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   updatePassword,
+  User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { hasLocalSession } from "@/lib/useOfflineSession";
+import { isUserAllowedIn } from "@/lib/authHelper";
 import { requestNotificationPermissions, scheduleDailyReminders } from "@/lib/notifications";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 
-type AuthMode = "login" | "signup" | "forgot_password" | "reset_password";
+type AuthMode = "login" | "signup" | "forgot_password" | "reset_password" | "verify_email";
 
 function AuthContent() {
-  // A signed-in user never needs this form. Showing it for a frame during an
-  // in-app reload is the same flash as the landing page's, so the screen stays
-  // blank until Firebase confirms them and the redirect below runs.
-  const [signedIn] = useState(hasLocalSession);
+  const [signedIn, setSignedIn] = useState(hasLocalSession);
   const searchParams = useSearchParams();
   const initialMode = (searchParams.get("mode") as AuthMode) || "login";
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -33,12 +33,39 @@ function AuthContent() {
   const [otpCode, setOtpCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showOverrideWarning, setShowOverrideWarning] = useState(false);
   const router = useRouter();
 
+  // Verification Screen States
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [checkingVerification, setCheckingVerification] = useState(false);
+  const [verifyFeedback, setVerifyFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // If a logged-in user fails isUserAllowedIn check, direct them to verification screen
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && !isUserAllowedIn(user)) {
+        setSignedIn(false);
+        setVerificationEmail(user.email || "");
+        setMode("verify_email");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Cooldown timer tick down
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
+
   const copyPendingSetupToLocal = () => {
-    // The pending setup is consumed here; clear it so a later visit to the
-    // landing screen cannot re-apply a stale protocol (reinstall / cache wipe).
     const keysToCopy = [
       { sessionKey: "pending_frequency", localKey: "ultimatum_frequency", defaultVal: "3-days" },
       { sessionKey: "pending_gender", localKey: "ultimatum_gender", defaultVal: "male" },
@@ -80,9 +107,6 @@ function AuthContent() {
     keysToClear.forEach(key => sessionStorage.removeItem(key));
   };
 
-  // Persist the user's protocol to Firestore. saveUserSettingsToCloud already
-  // retries internally (3 attempts); this outer cap is only a safety net so a
-  // dead network cannot hang signup/login indefinitely.
   const persistToCloud = async (uid: string): Promise<void> => {
     const { saveUserSettingsToCloud } = await import("@/lib/syncService");
     await Promise.race([
@@ -94,8 +118,6 @@ function AuthContent() {
   const flagCloudSyncWarning = () => {
     try {
       sessionStorage.setItem("ultimatum_cloud_sync_warning", "true");
-      // Land on /campaign after auth so the warning banner is actually seen
-      // (it lives on the campaign screen, not on the landing screen).
       sessionStorage.setItem("ultimatum_post_auth_target", "/campaign");
     } catch {}
   };
@@ -104,20 +126,10 @@ function AuthContent() {
     try { sessionStorage.removeItem("ultimatum_cloud_sync_warning"); } catch {}
   };
 
-  /**
-   * Leaving auth for the main app. Setup screens there were opened by a real
-   * session (their own Back button points at Settings), so auth is replaced
-   * rather than pushed; the landing screen also keeps its dismiss-on-back.
-   */
   const leaveAuthForCampaign = () => {
     router.replace("/campaign");
   };
 
-  /**
-   * Signing up from the end of onboarding has nothing sensible behind it —
-   * the wizard is finished. Swapping the stack root keeps Back from exiting
-   * the app right after account creation; a login keeps its history.
-   */
   const leaveAuthAfterSignup = () => {
     if (mode === "signup") {
       window.history.replaceState(window.history.state, "", "/campaign");
@@ -141,6 +153,82 @@ function AuthContent() {
     await loadUserSettingsFromCloud();
     setShowOverrideWarning(false);
     leaveAuthForCampaign();
+  };
+
+  /**
+   * Finalizes successful authentication across all sign-in methods
+   * (email/password login, email verification, and Google Sign-In).
+   */
+  const completeSuccessfulAuth = async (user: User) => {
+    const loggedInUid = user.uid;
+
+    const cachedToken = await user.getIdToken().catch(() => undefined);
+    localStorage.setItem("ultimatum_cached_session", JSON.stringify({
+      user: {
+        id: user.uid,
+        email: user.email,
+        name: user.displayName,
+      },
+      access_token: cachedToken,
+    }));
+    localStorage.setItem("ultimatum_session_active", "1");
+
+    const pendingFreq = sessionStorage.getItem("pending_frequency");
+    const existingFreq = localStorage.getItem("ultimatum_frequency");
+
+    if (pendingFreq) {
+      if (existingFreq && mode === "login") {
+        setShowOverrideWarning(true);
+        setLoading(false);
+        return;
+      } else {
+        copyPendingSetupToLocal();
+        clearPendingSetup();
+        try {
+          await persistToCloud(loggedInUid);
+          clearCloudSyncWarning();
+        } catch (err) {
+          console.error("[auth] PENDING SETUP CLOUD SAVE FAILED:", err);
+          flagCloudSyncWarning();
+        }
+        router.replace("/campaign");
+      }
+    } else {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { display } = await LocalNotifications.checkPermissions();
+          if (display !== "granted") {
+            await requestNotificationPermissions();
+          }
+          await scheduleDailyReminders();
+        } catch (_) {}
+      }
+
+      const { loadUserSettingsFromCloud } = await import("@/lib/syncService");
+      let keysRestored = 0;
+      try {
+        keysRestored = await loadUserSettingsFromCloud(loggedInUid);
+      } catch (err: any) {
+        console.error("[auth] LOGIN HYDRATION FAILED — proceeding with local data only:", err?.message || err);
+        flagCloudSyncWarning();
+      }
+
+      if (keysRestored > 0) {
+        console.log("[auth] Cloud hydration succeeded —", keysRestored, "keys restored. Proceeding to campaign.");
+        clearCloudSyncWarning();
+      } else {
+        console.warn("[auth] Cloud hydration returned 0 keys. Initializing local data backup.");
+        try {
+          await persistToCloud(loggedInUid);
+          clearCloudSyncWarning();
+        } catch (saveErr) {
+          console.error("[auth] SIGNUP CLOUD SAVE FAILED:", saveErr);
+          flagCloudSyncWarning();
+        }
+      }
+
+      leaveAuthAfterSignup();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,97 +262,37 @@ function AuthContent() {
       if (authError) {
         setError(authError);
         setLoading(false);
-      } else {
-        const loggedInUid = userCredential?.user?.uid;
+        return;
+      }
 
-        if (userCredential?.user) {
-          // Cache the session locally for immediate access during the boot
-          // loader. MUST match the shape useOfflineSession writes, otherwise
-          // getAuthHeaders() (custom-split /api/sync calls) and the offline
-          // fallback read a malformed object.
-          const cachedToken = await userCredential.user.getIdToken().catch(() => undefined);
-          localStorage.setItem("ultimatum_cached_session", JSON.stringify({
-            user: {
-              id: userCredential.user.uid,
-              email: userCredential.user.email,
-              name: userCredential.user.displayName,
-            },
-            access_token: cachedToken,
-          }));
-        }
+      const user = userCredential?.user as User | undefined;
+      if (!user) {
+        setError("Authentication failed: No user returned");
+        setLoading(false);
+        return;
+      }
 
-        const pendingFreq = sessionStorage.getItem("pending_frequency");
-        const existingFreq = localStorage.getItem("ultimatum_frequency");
-
-        if (pendingFreq) {
-          if (existingFreq && mode === "login") {
-            setShowOverrideWarning(true);
-            setLoading(false);
-            return;
-          } else {
-            copyPendingSetupToLocal();
-            clearPendingSetup();
-            // Always save to cloud after copying pending setup — this is the
-            // critical step that persists data for returning logins.
-            try {
-              await persistToCloud(loggedInUid);
-              clearCloudSyncWarning();
-            } catch (err) {
-              console.error("[auth] PENDING SETUP CLOUD SAVE FAILED:", err);
-              flagCloudSyncWarning();
-            }
-            router.replace("/campaign");
-          }
-        } else {
-          // Returning login — check notification permission and request if not granted
-          if (Capacitor.isNativePlatform()) {
-            try {
-              const { display } = await LocalNotifications.checkPermissions();
-              if (display !== 'granted') {
-                await requestNotificationPermissions();
-              }
-              await scheduleDailyReminders();
-            } catch (_) {}
-          }
-          
-          if (mode === "login") {
-            const { loadUserSettingsFromCloud } = await import("@/lib/syncService");
-
-            // CRITICAL: await the Firestore fetch and hydrate localStorage
-            // BEFORE routing to the dashboard, so a returning user's routine is
-            // injected into global state (localStorage) first.
-            let keysRestored = 0;
-            try {
-              keysRestored = await loadUserSettingsFromCloud(loggedInUid);
-            } catch (err: any) {
-              // loadUserSettingsFromCloud already retried internally; if it still
-              // failed we surface a warning rather than silently defaulting to PPL.
-              console.error("[auth] LOGIN HYDRATION FAILED — proceeding with local data only:", err?.message || err);
-              flagCloudSyncWarning();
-            }
-
-            if (keysRestored > 0) {
-              console.log("[auth] Cloud hydration succeeded —", keysRestored, "keys restored. Proceeding to campaign.");
-              clearCloudSyncWarning();
-            } else {
-              console.warn("[auth] Cloud hydration returned 0 keys. User may have no saved data or is a new account.");
-            }
-
-          } else if (mode === "signup") {
-            // New signup with no pending setup — save any local data to cloud
-            try {
-              await persistToCloud(loggedInUid);
-              clearCloudSyncWarning();
-            } catch (saveErr) {
-              console.error("[auth] SIGNUP CLOUD SAVE FAILED:", saveErr);
-              flagCloudSyncWarning();
-            }
-          }
-
-          // Successful login/signup — go to the main app
-          leaveAuthAfterSignup();
+      // If newly registered, immediately trigger email verification
+      if (mode === "signup") {
+        try {
+          await sendEmailVerification(user);
+        } catch (verErr: any) {
+          console.warn("[auth] sendEmailVerification error:", verErr);
         }
       }
+
+      // Zero-loss grandfathering & verification check
+      if (!isUserAllowedIn(user)) {
+        setVerificationEmail(user.email || email);
+        setMode("verify_email");
+        setResendCooldown(60);
+        setLoading(false);
+        return;
+      }
+
+      // Allowed user - proceed with standard authentication flow
+      await completeSuccessfulAuth(user);
+      setLoading(false);
     } else if (mode === "forgot_password") {
       try {
         await sendPasswordResetEmail(auth, email);
@@ -290,12 +318,186 @@ function AuthContent() {
     }
   };
 
+  // Google Sign-In handler (Hybrid Web + Capacitor Android)
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError("");
+
+    try {
+      const { signInWithGoogle, checkUserProfileExists } = await import("@/lib/authHelper");
+      const userCredential = await signInWithGoogle();
+      const user = userCredential.user;
+
+      if (!user) {
+        throw new Error("No user returned from Google authentication.");
+      }
+
+      const uid = user.uid;
+      const exists = await checkUserProfileExists(uid);
+
+      const pendingFreq = sessionStorage.getItem("pending_frequency");
+      const existingFreq = localStorage.getItem("ultimatum_frequency");
+
+      if (exists) {
+        // Document already exists! Preserve it completely.
+        if (pendingFreq && existingFreq) {
+          setShowOverrideWarning(true);
+          setGoogleLoading(false);
+          return;
+        }
+
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const { display } = await LocalNotifications.checkPermissions();
+            if (display !== "granted") {
+              await requestNotificationPermissions();
+            }
+            await scheduleDailyReminders();
+          } catch (_) {}
+        }
+
+        const { loadUserSettingsFromCloud } = await import("@/lib/syncService");
+        try {
+          await loadUserSettingsFromCloud(uid);
+          clearCloudSyncWarning();
+        } catch (err) {
+          console.error("[auth] Google login hydration failed:", err);
+          flagCloudSyncWarning();
+        }
+      } else {
+        // Document does not exist. Initialize user profile with existing logic
+        if (pendingFreq) {
+          copyPendingSetupToLocal();
+          clearPendingSetup();
+        }
+        try {
+          await persistToCloud(uid);
+          clearCloudSyncWarning();
+        } catch (saveErr) {
+          console.error("[auth] Google signup cloud save failed:", saveErr);
+          flagCloudSyncWarning();
+        }
+      }
+
+      // Cache session in localStorage
+      const cachedToken = await user.getIdToken().catch(() => undefined);
+      localStorage.setItem("ultimatum_cached_session", JSON.stringify({
+        user: {
+          id: user.uid,
+          email: user.email,
+          name: user.displayName,
+        },
+        access_token: cachedToken,
+      }));
+      localStorage.setItem("ultimatum_session_active", "1");
+
+      leaveAuthAfterSignup();
+    } catch (err: any) {
+      console.error("[auth] Google sign-in error:", err);
+      if (err.code === "auth/account-exists-with-different-credential") {
+        setError("An account already exists with this email address. Please sign in with your email and password.");
+      } else if (err.code === "auth/popup-closed-by-user") {
+        setError("Google sign-in popup was closed before completion.");
+      } else {
+        setError(err.message?.replace("Firebase: ", "") || "Google sign-in failed. Please try again.");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // Verification button handler: reload and check status
+  const handleCheckVerification = async () => {
+    setCheckingVerification(true);
+    setVerifyFeedback(null);
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setVerifyFeedback({
+          type: "error",
+          message: "No active session found. Please sign in with your credentials.",
+        });
+        setCheckingVerification(false);
+        return;
+      }
+
+      await user.reload();
+      const reloadedUser = auth.currentUser;
+
+      if (reloadedUser && isUserAllowedIn(reloadedUser)) {
+        setVerifyFeedback({
+          type: "success",
+          message: "Email confirmed. Initializing your protocol...",
+        });
+        await completeSuccessfulAuth(reloadedUser);
+      } else {
+        setVerifyFeedback({
+          type: "error",
+          message: "Your email has not been verified yet. Check your inbox and click the verification link.",
+        });
+      }
+    } catch (err: any) {
+      setVerifyFeedback({
+        type: "error",
+        message: err.message?.replace("Firebase: ", "") || "Verification check failed. Please try again.",
+      });
+    } finally {
+      setCheckingVerification(false);
+    }
+  };
+
+  // Resend verification email handler with cooldown
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0 || resending) return;
+    setResending(true);
+    setVerifyFeedback(null);
+
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await sendEmailVerification(user);
+        setResendCooldown(60);
+        setVerifyFeedback({
+          type: "success",
+          message: "Verification email resent. Check your inbox and spam folder.",
+        });
+      } else {
+        setVerifyFeedback({
+          type: "error",
+          message: "Session expired. Please sign out and sign in again.",
+        });
+      }
+    } catch (err: any) {
+      setVerifyFeedback({
+        type: "error",
+        message: err.message?.replace("Firebase: ", "") || "Failed to resend verification email.",
+      });
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Sign out from verification screen
+  const handleSignOutFromVerification = async () => {
+    try {
+      await auth.signOut();
+      localStorage.removeItem("ultimatum_session_active");
+      localStorage.removeItem("ultimatum_cached_session");
+    } catch {}
+    setVerificationEmail("");
+    setVerifyFeedback(null);
+    setError("");
+    setMode("login");
+  };
+
   const getHeading = () => {
     switch (mode) {
       case "login": return "AUTHORIZE";
       case "signup": return "INITIATE";
       case "forgot_password": return "RECOVER";
       case "reset_password": return "RESET";
+      case "verify_email": return "VERIFY YOUR IDENTITY";
     }
   };
 
@@ -305,6 +507,7 @@ function AuthContent() {
       case "signup": return "Create your identity. The protocol awaits.";
       case "forgot_password": return "Request access recovery code.";
       case "reset_password": return "Establish new credentials.";
+      case "verify_email": return "Activate your credentials to access the protocol.";
     }
   };
 
@@ -319,106 +522,230 @@ function AuthContent() {
       <img src="/onboarding/premium_photo-1672862928749-d49270b3af84.avif" className="absolute inset-0 w-full h-full object-cover pointer-events-none -z-20" alt="Background" />
       <div className="absolute inset-0 bg-black/80 z-0 pointer-events-none"></div>
 
-      <motion.div
-        key={mode} // Animate on mode change
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white/5 backdrop-blur-3xl border border-white/20 p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
-      >
-        <h1 className="text-3xl font-light uppercase tracking-[0.2em] mb-2 text-white drop-shadow-md text-center">
-          <DecryptedText text={getHeading()} animateOn="view" speed={50} maxIterations={10} encryptedClassName="text-white/30" />
-        </h1>
-        <p className="text-white/70 mb-10 text-sm font-light text-center leading-relaxed">
-          {getSubheading()}
-        </p>
+      {mode === "verify_email" ? (
+        /* DEDICATED VERIFY YOUR IDENTITY SCREEN */
+        <motion.div
+          key="verify_email"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-zinc-950/95 backdrop-blur-3xl border border-zinc-800 p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10 overflow-hidden"
+        >
+          {/* Subtle amber accent ambient glow */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 blur-[90px] rounded-full pointer-events-none" />
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
-              required
-            />
+          {/* Icon + Header */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-14 h-14 rounded-full bg-zinc-900 border border-amber-500/30 flex items-center justify-center mb-4 shadow-[0_0_25px_rgba(245,158,11,0.15)]">
+              <Mail className="w-6 h-6 text-amber-400" />
+            </div>
+
+            <h1 className="text-2xl md:text-3xl font-light uppercase tracking-[0.2em] mb-2 text-white drop-shadow-md text-center">
+              <DecryptedText text="VERIFY YOUR IDENTITY" animateOn="view" speed={50} maxIterations={10} encryptedClassName="text-white/30" />
+            </h1>
+            <p className="text-zinc-400 text-xs md:text-sm font-light text-center leading-relaxed">
+              A protocol activation link has been dispatched to:
+            </p>
+            <div className="mt-3 px-4 py-2 rounded-xl bg-zinc-900/90 border border-zinc-800 text-amber-300 font-mono text-xs tracking-wider break-all select-all">
+              {verificationEmail || auth.currentUser?.email || "your registered email"}
+            </div>
           </div>
 
-          {mode === "reset_password" && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">Recovery Code</label>
-              <input
-                type="text"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
-                required
-              />
+          {/* Verification notice */}
+          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 mb-6 text-center">
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Open the verification link to confirm your identity.
+              <span className="block mt-1.5 text-zinc-300 font-normal">
+                Be sure to check your <span className="text-white font-medium">Spam</span> and <span className="text-white font-medium">Promotions</span> folders if it doesn't appear promptly.
+              </span>
+            </p>
+          </div>
+
+          {/* Status feedback */}
+          {verifyFeedback && (
+            <div className={`mb-6 p-3.5 rounded-xl text-xs font-medium text-center ${
+              verifyFeedback.type === "error"
+                ? "bg-red-950/40 border border-red-800/60 text-red-400"
+                : "bg-amber-950/30 border border-amber-700/50 text-amber-300"
+            }`}>
+              {verifyFeedback.message}
             </div>
           )}
 
-          {mode !== "forgot_password" && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">
-                {mode === "reset_password" ? "New Password" : "Password"}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
-                required
-              />
-            </div>
-          )}
-
-          {mode === "signup" && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
-                required
-              />
-            </div>
-          )}
-
-          {error && <div className="text-red-500 text-sm font-medium">{error}</div>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-6 font-semibold tracking-[0.2em] uppercase py-4 px-10 text-xs md:text-sm rounded-full bg-white/20 text-white shadow-sm hover:shadow-md hover:bg-white hover:text-black transition-all border border-white/30 disabled:opacity-50 disabled:hover:bg-white/20 disabled:hover:text-white"
-          >
-            {loading ? "PROCESSING..." : mode === "login" ? "ENTER" : mode === "signup" ? "JOIN" : mode === "forgot_password" ? "SEND CODE" : "UPDATE"}
-          </button>
-        </form>
-
-        <div className="mt-8 flex flex-col gap-4 text-center text-xs font-bold tracking-wider text-white/50 uppercase">
-          {mode === "login" || mode === "signup" ? (
-            <>
-              {mode === "signup" && (
-                <button onClick={() => setMode("login")} className="hover:text-white transition-colors decoration-white/30 underline-offset-4">
-                  Already have an account? SIGN IN
-                </button>
-              )}
-              {mode === "login" && (
-                <button type="button" onClick={() => setMode("forgot_password")} className="hover:text-white transition-colors">
-                  Forgot Password?
-                </button>
-              )}
-            </>
-          ) : (
-            <button onClick={() => setMode("login")} className="hover:text-white transition-colors decoration-white/30 underline-offset-4">
-              Return to SIGN IN
+          {/* Verification Action Buttons */}
+          <div className="flex flex-col gap-3.5">
+            <button
+              type="button"
+              onClick={handleCheckVerification}
+              disabled={checkingVerification}
+              className="w-full py-4 px-6 rounded-full bg-white text-black font-semibold text-xs md:text-sm tracking-[0.2em] uppercase hover:bg-zinc-200 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.15)] disabled:opacity-50"
+            >
+              {checkingVerification ? "VERIFYING..." : "I'VE VERIFIED MY EMAIL"}
             </button>
+
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendCooldown > 0 || resending}
+              className="w-full py-3.5 px-6 rounded-full bg-transparent border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/60 text-white font-medium text-xs tracking-[0.15em] uppercase transition-all duration-300 disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:bg-transparent"
+            >
+              {resending
+                ? "TRANSMITTING..."
+                : resendCooldown > 0
+                ? `RESEND EMAIL (${resendCooldown}s)`
+                : "RESEND VERIFICATION EMAIL"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSignOutFromVerification}
+              className="mt-2 text-center text-[11px] font-bold tracking-[0.15em] text-zinc-500 hover:text-white uppercase transition-colors"
+            >
+              SIGN OUT / USE ANOTHER ACCOUNT
+            </button>
+          </div>
+        </motion.div>
+      ) : (
+        /* STANDARD INITIATE / SIGN IN CARD */
+        <motion.div
+          key={mode} // Animate on mode change
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-white/5 backdrop-blur-3xl border border-white/20 p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
+        >
+          <h1 className="text-3xl font-light uppercase tracking-[0.2em] mb-2 text-white drop-shadow-md text-center">
+            <DecryptedText text={getHeading()} animateOn="view" speed={50} maxIterations={10} encryptedClassName="text-white/30" />
+          </h1>
+          <p className="text-white/70 mb-8 text-sm font-light text-center leading-relaxed">
+            {getSubheading()}
+          </p>
+
+          {/* GOOGLE SIGN IN BUTTON + OR DIVIDER */}
+          {(mode === "login" || mode === "signup") && (
+            <div className="flex flex-col gap-5 mb-6">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading || googleLoading}
+                className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl bg-zinc-900/80 border border-zinc-700/80 hover:border-zinc-500 hover:bg-zinc-800/90 text-white font-medium text-xs md:text-sm tracking-[0.15em] uppercase transition-all duration-300 shadow-md disabled:opacity-50"
+              >
+                {/* Official Google 'G' SVG Icon */}
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>{googleLoading ? "AUTHENTICATING..." : "CONTINUE WITH GOOGLE"}</span>
+              </button>
+
+              <div className="flex items-center gap-4">
+                <div className="h-[1px] flex-1 bg-zinc-800" />
+                <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">OR</span>
+                <div className="h-[1px] flex-1 bg-zinc-800" />
+              </div>
+            </div>
           )}
-        </div>
-      </motion.div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
+                required
+              />
+            </div>
+
+            {mode === "reset_password" && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">Recovery Code</label>
+                <input
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
+                  required
+                />
+              </div>
+            )}
+
+            {mode !== "forgot_password" && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">
+                  {mode === "reset_password" ? "New Password" : "Password"}
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
+                  required
+                />
+              </div>
+            )}
+
+            {mode === "signup" && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] ml-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-white/5 border border-white/10 p-4 rounded-xl focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all text-white placeholder-white/20 shadow-inner"
+                  required
+                />
+              </div>
+            )}
+
+            {error && <div className="text-red-500 text-sm font-medium">{error}</div>}
+
+            <button
+              type="submit"
+              disabled={loading || googleLoading}
+              className="mt-6 font-semibold tracking-[0.2em] uppercase py-4 px-10 text-xs md:text-sm rounded-full bg-white/20 text-white shadow-sm hover:shadow-md hover:bg-white hover:text-black transition-all border border-white/30 disabled:opacity-50 disabled:hover:bg-white/20 disabled:hover:text-white"
+            >
+              {loading ? "PROCESSING..." : mode === "login" ? "ENTER" : mode === "signup" ? "JOIN" : mode === "forgot_password" ? "SEND CODE" : "UPDATE"}
+            </button>
+          </form>
+
+          <div className="mt-8 flex flex-col gap-4 text-center text-xs font-bold tracking-wider text-white/50 uppercase">
+            {mode === "login" || mode === "signup" ? (
+              <>
+                {mode === "signup" && (
+                  <button onClick={() => setMode("login")} className="hover:text-white transition-colors decoration-white/30 underline-offset-4">
+                    Already have an account? SIGN IN
+                  </button>
+                )}
+                {mode === "login" && (
+                  <button type="button" onClick={() => setMode("forgot_password")} className="hover:text-white transition-colors">
+                    Forgot Password?
+                  </button>
+                )}
+              </>
+            ) : (
+              <button onClick={() => setMode("login")} className="hover:text-white transition-colors decoration-white/30 underline-offset-4">
+                Return to SIGN IN
+              </button>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* OVERRIDE WARNING MODAL */}
       <AnimatePresence>
