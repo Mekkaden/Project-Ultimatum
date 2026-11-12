@@ -3,10 +3,8 @@
 import React, { Suspense } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Montserrat } from "next/font/google";
+import { montserrat } from "@/app/fonts";
 import { Cpu, Settings2 } from "lucide-react";
-
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["200", "400", "600", "800"] });
 
 function SetupModeContent() {
   const router = useRouter();

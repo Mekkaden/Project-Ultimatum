@@ -3,15 +3,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Montserrat } from "next/font/google";
+import { montserrat } from "@/app/fonts";
 import { useOfflineSession } from "@/lib/useOfflineSession";
 import { requestNotificationPermissions, scheduleWelcomeNotification, scheduleDailyReminders } from "@/lib/notifications";
 import { Ruler, Weight, Activity, ChevronRight, ChevronLeft, ChevronDown, Loader2 } from "lucide-react";
 import DecryptedText from "./DecryptedText";
 import NutritionReview from "./NutritionReview";
 import { calculateBaseNutrition, NutritionTargets, Gender, Objective, ActivityLevel, ACTIVITY_LEVELS } from "@/lib/nutrition";
-
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["200", "400", "600", "800"] });
 
 type Step = "metrics" | "objective" | "nutrition_review" | "calculating";
 

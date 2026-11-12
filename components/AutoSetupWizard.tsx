@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Montserrat } from "next/font/google";
+import { montserrat } from "@/app/fonts";
 import { useOfflineSession } from "@/lib/useOfflineSession";
 import { requestNotificationPermissions, scheduleWelcomeNotification, scheduleDailyReminders } from "@/lib/notifications";
 import { Ruler, Weight, CalendarDays, Activity, ChevronRight, ChevronLeft, ChevronDown, Check, Loader2 } from "lucide-react";
@@ -11,8 +11,6 @@ import DecryptedText from "./DecryptedText";
 import { getAllowedFrequencyNumbers } from "@/lib/utils";
 import NutritionReview from "./NutritionReview";
 import { calculateBaseNutrition, NutritionTargets, Gender, Objective, ActivityLevel, ACTIVITY_LEVELS } from "@/lib/nutrition";
-
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["200", "400", "600", "800"] });
 
 type Step = "metrics" | "objective" | "nutrition_review" | "frequency" | "modules" | "calculating";
 

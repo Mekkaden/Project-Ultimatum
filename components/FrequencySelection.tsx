@@ -3,13 +3,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Activity, Zap, AlertTriangle } from "lucide-react";
-import { Montserrat } from "next/font/google";
+import { montserrat } from "@/app/fonts";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useOfflineSession } from "@/lib/useOfflineSession";
 import DecryptedText from "./DecryptedText";
 import { getAllowedFrequencyIds } from "@/lib/utils";
-
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["200", "400", "600", "800"] });
 
 type Frequency = "3-days" | "4-days" | "5-days" | "6-days" | "custom" | null;
 type Directive = "hypertrophy" | "strength" | "calisthenics" | "hybrid" | null;

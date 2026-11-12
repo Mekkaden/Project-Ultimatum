@@ -6,10 +6,8 @@ import { useRouter } from "next/navigation";
 import { useHardwareBack } from "@/lib/useHardwareBack";
 import { returnToOnboardingIntro } from "@/lib/onboarding";
 import { Dumbbell, Weight, Activity, Zap, Star, ArrowLeft, AlertTriangle } from "lucide-react";
-import { Montserrat } from "next/font/google";
+import { montserrat } from "@/app/fonts";
 import { CardBody, CardContainer, CardItem } from "./ui/3d-card";
-
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["400", "700", "900"] });
 
 type Directive = "hypertrophy" | "strength" | "calisthenics" | "hybrid" | null;
 
