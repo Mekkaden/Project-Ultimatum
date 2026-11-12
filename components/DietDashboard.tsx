@@ -581,17 +581,18 @@ export default function DietDashboard({ plan: planProp, isOffline: isOfflineProp
           </button>
           <button 
             onClick={function() { setActiveTab("ai-text"); }}
-            disabled={effectivelyOffline}
-            className={`col-span-1 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors border-r border-neutral-800 md:border-none ${activeTab === "ai-text" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"} ${effectivelyOffline ? "opacity-30 cursor-not-allowed" : ""}`}
+            className={`col-span-1 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors border-r border-neutral-800 md:border-none flex items-center justify-center gap-1.5 ${activeTab === "ai-text" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"}`}
           >
-            AI Text
+            <span>AI Text</span>
+            <span className="text-[7px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black tracking-wider">PRO</span>
           </button>
           <button 
             onClick={function() { setActiveTab("ai"); }}
-            disabled={effectivelyOffline}
-            className={`col-span-2 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 md:gap-2 ${activeTab === "ai" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"} ${effectivelyOffline ? "opacity-30 cursor-not-allowed" : ""}`}
+            className={`col-span-2 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 md:gap-2 ${activeTab === "ai" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"}`}
           >
-            <Camera size={12} className="md:w-3 md:h-3" /> AI Image Scan
+            <Camera size={12} className="md:w-3 md:h-3" />
+            <span>AI Scan</span>
+            <span className="text-[7px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black tracking-wider">PRO</span>
           </button>
         </div>
 
@@ -802,135 +803,67 @@ export default function DietDashboard({ plan: planProp, isOffline: isOfflineProp
 
           {activeTab === "ai-text" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              {effectivelyOffline ? (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <WifiOff className="text-neutral-500 mb-4" size={32} />
-                  <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">Offline</h3>
-                  <p className="text-xs font-bold text-neutral-500 mb-4">
-                    AI Parsing requires an active internet connection to communicate with the AI model.
-                  </p>
-                  <button 
-                    onClick={() => setIsNetworkFailed(false)}
-                    className="text-xs font-bold uppercase tracking-widest text-white border border-neutral-700 px-4 py-2 rounded-lg hover:bg-neutral-900"
+              <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-neutral-950/40 border border-neutral-900 rounded-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400">
+                  <Lock size={20} />
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black tracking-widest uppercase mb-3">
+                  <span>ULTIMATUM PRO</span>
+                </div>
+                <h3 className="text-base font-black text-white uppercase tracking-wider mb-2">
+                  Conversational AI Logging
+                </h3>
+                <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mb-6 font-medium">
+                  Natural language macro estimation is reserved for the upcoming Ultimatum Pro tier. Use Quick Add or the USDA database to log your food for free.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => setActiveTab("quick")}
+                    className="px-5 py-2.5 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-colors shadow-md"
                   >
-                    Retry Connection
+                    Quick Add (Free)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("search")}
+                    className="px-5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-colors"
+                  >
+                    Search Database (Free)
                   </button>
                 </div>
-              ) : (
-                <>
-                  <div className="flex flex-col gap-4 relative">
-                    <textarea 
-                      value={aiTextQuery}
-                      onChange={function(e) { setAiTextQuery(e.target.value); }}
-                      placeholder="E.g., I had 200g of chicken breast, a cup of rice, and a tablespoon of olive oil"
-                      className="w-full h-32 bg-neutral-950 border border-neutral-800 rounded-lg p-4 text-white font-bold outline-none focus:border-neutral-500 resize-none pr-12"
-                    />
-                    {voiceSupported && (
-                      <button
-                        onClick={toggleListen}
-                        aria-label="Log food by voice"
-                        className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${isListening ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}
-                      >
-                        <Mic size={20} />
-                      </button>
-                    )}
-                    <button 
-                      onClick={handleParseText}
-                      disabled={isParsingText || !aiTextQuery.trim()}
-                      className="w-full bg-white text-black px-6 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.98]"
-                    >
-                      {isParsingText ? <Loader2 size={16} className="animate-spin" /> : null}
-                      Parse with AI
-                    </button>
-                  </div>
-
-                  {parsedTextResult && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-4 bg-neutral-950 border border-neutral-800 rounded-lg">
-                      <div className="text-xl font-black text-white uppercase tracking-wider mb-2">{parsedTextResult.foodName}</div>
-                      <div className="flex gap-4 text-xs font-bold uppercase tracking-widest mb-6">
-                        <span className="text-white">{parsedTextResult.calories} kcal</span>
-                        <span className="text-blue-500">{parsedTextResult.protein}g Pro</span>
-                        <span className="text-emerald-500">{parsedTextResult.carbs}g Carb</span>
-                        <span className="text-amber-500">{parsedTextResult.fats}g Fat</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <button onClick={function() { setParsedTextResult(null); }} className="flex-1 py-3 bg-neutral-900 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800">Discard</button>
-                        <button 
-                          onClick={function() { 
-                            handleAddFood(parsedTextResult.calories, parsedTextResult.protein, parsedTextResult.carbs, parsedTextResult.fats, parsedTextResult.foodName);
-                            setParsedTextResult(null);
-                            setAiTextQuery("");
-                          }} 
-                          className="flex-1 py-3 bg-[#e4fcaf] text-black shadow-sm text-xs font-black uppercase tracking-widest rounded-lg hover:brightness-105"
-                        >
-                          Log Food
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </>
-              )}
+              </div>
             </motion.div>
           )}
 
           {activeTab === "ai" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              {effectivelyOffline ? (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <WifiOff className="text-neutral-500 mb-4" size={32} />
-                  <h3 className="text-lg font-black text-white uppercase tracking-wider mb-2">Offline</h3>
-                  <p className="text-xs font-bold text-neutral-500 mb-4">
-                    AI Scanning requires an active internet connection to communicate with the vision model.
-                  </p>
+              <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-neutral-950/40 border border-neutral-900 rounded-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400">
+                  <Camera size={20} />
                 </div>
-              ) : (
-                <>
-                  <div className="border-2 border-dashed border-neutral-800 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-neutral-950/50 hover:bg-neutral-950 transition-colors">
-                    {isScanningImage ? (
-                      <div className="flex flex-col items-center text-neutral-400">
-                        <Loader2 size={32} className="animate-spin mb-4" />
-                        <p className="text-xs font-bold uppercase tracking-widest">Scanning Image...</p>
-                      </div>
-                    ) : (
-                      <>
-                        <Camera size={32} className="text-neutral-500 mb-4" />
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest mb-2">Upload or Take Photo</h3>
-                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest max-w-[200px] mb-6">
-                          Snap a picture of your plate to automatically estimate macros.
-                        </p>
-                        <label className="w-full max-w-[250px] flex items-center justify-center bg-white text-black px-6 py-4 rounded-full font-black uppercase tracking-[0.2em] hover:bg-neutral-200 transition-all cursor-pointer text-xs shadow-lg hover:shadow-xl active:scale-[0.98]">
-                          Choose Image
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                        </label>
-                      </>
-                    )}
-                  </div>
-
-                  {imageScanResult && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-4 bg-neutral-950 border border-neutral-800 rounded-lg">
-                      <div className="text-xl font-black text-white uppercase tracking-wider mb-2">{imageScanResult.foodName}</div>
-                      <div className="flex gap-4 text-xs font-bold uppercase tracking-widest mb-6 flex-wrap">
-                        <span className="text-white">{imageScanResult.calories} kcal</span>
-                        <span className="text-blue-500">{imageScanResult.protein}g Pro</span>
-                        <span className="text-emerald-500">{imageScanResult.carbs}g Carb</span>
-                        <span className="text-amber-500">{imageScanResult.fats}g Fat</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <button onClick={() => setImageScanResult(null)} className="flex-1 py-3 bg-neutral-900 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-neutral-800">Discard</button>
-                        <button 
-                          onClick={() => { 
-                            handleAddFood(imageScanResult.calories, imageScanResult.protein, imageScanResult.carbs, imageScanResult.fats, imageScanResult.foodName);
-                            setImageScanResult(null);
-                          }} 
-                          className="flex-1 py-3 bg-[#e4fcaf] text-black shadow-sm text-xs font-black uppercase tracking-widest rounded-lg hover:brightness-105"
-                        >
-                          Log Food
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </>
-              )}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black tracking-widest uppercase mb-3">
+                  <span>ULTIMATUM PRO</span>
+                </div>
+                <h3 className="text-base font-black text-white uppercase tracking-wider mb-2">
+                  AI Meal Photo Scanner
+                </h3>
+                <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mb-6 font-medium">
+                  Instant visual plate analysis and macro detection are reserved for the upcoming Ultimatum Pro tier. Use Quick Add or the USDA database to log your food for free.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => setActiveTab("quick")}
+                    className="px-5 py-2.5 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-colors shadow-md"
+                  >
+                    Quick Add (Free)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("search")}
+                    className="px-5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-colors"
+                  >
+                    Search Database (Free)
+                  </button>
+                </div>
+              </div>
             </motion.div>
           )}
         </div>
