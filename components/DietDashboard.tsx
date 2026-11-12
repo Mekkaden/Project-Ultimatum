@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Lock, Search, Plus, Loader2, RefreshCw, WifiOff, Mic, Pencil, X, Save } from 'lucide-react';
+import { Search, Plus, Loader2, RefreshCw, WifiOff, Mic, Pencil, X, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getAuthHeaders } from '@/lib/utils';
 import { RecalculateMacrosModal } from '@/components/RecalculateMacrosModal';
@@ -584,15 +584,14 @@ export default function DietDashboard({ plan: planProp, isOffline: isOfflineProp
             className={`col-span-1 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors border-r border-neutral-800 md:border-none flex items-center justify-center gap-1.5 ${activeTab === "ai-text" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"}`}
           >
             <span>AI Text</span>
-            <span className="text-[7px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black tracking-wider">PRO</span>
+            <span className="text-white font-bold text-[9px] md:text-[10px] lowercase">pro</span>
           </button>
           <button 
             onClick={function() { setActiveTab("ai"); }}
-            className={`col-span-2 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 md:gap-2 ${activeTab === "ai" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"}`}
+            className={`col-span-2 md:col-span-auto md:flex-1 py-3 md:py-4 text-[9px] md:text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 ${activeTab === "ai" ? "bg-neutral-900 text-white" : "bg-black text-neutral-500 hover:bg-neutral-950"}`}
           >
-            <Camera size={12} className="md:w-3 md:h-3" />
             <span>AI Scan</span>
-            <span className="text-[7px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-black tracking-wider">PRO</span>
+            <span className="text-white font-bold text-[9px] md:text-[10px] lowercase">pro</span>
           </button>
         </div>
 
@@ -802,68 +801,24 @@ export default function DietDashboard({ plan: planProp, isOffline: isOfflineProp
           )}
 
           {activeTab === "ai-text" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-neutral-950/40 border border-neutral-900 rounded-2xl">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400">
-                  <Lock size={20} />
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black tracking-widest uppercase mb-3">
-                  <span>ULTIMATUM PRO</span>
-                </div>
-                <h3 className="text-base font-black text-white uppercase tracking-wider mb-2">
-                  Conversational AI Logging
-                </h3>
-                <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mb-6 font-medium">
-                  Natural language macro estimation is reserved for the upcoming Ultimatum Pro tier. Use Quick Add or the USDA database to log your food for free.
-                </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <button
-                    onClick={() => setActiveTab("quick")}
-                    className="px-5 py-2.5 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-colors shadow-md"
-                  >
-                    Quick Add (Free)
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("search")}
-                    className="px-5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-colors"
-                  >
-                    Search Database (Free)
-                  </button>
-                </div>
-              </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-14 px-4 text-center">
+              <h3 className="text-sm font-black uppercase tracking-[0.25em] text-white mb-2">
+                LOCKED
+              </h3>
+              <p className="text-xs text-neutral-500 font-medium max-w-xs mx-auto leading-relaxed">
+                This feature is currently locked. Use Quick Add or Database search to log your nutrition.
+              </p>
             </motion.div>
           )}
 
           {activeTab === "ai" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-neutral-950/40 border border-neutral-900 rounded-2xl">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-400">
-                  <Camera size={20} />
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black tracking-widest uppercase mb-3">
-                  <span>ULTIMATUM PRO</span>
-                </div>
-                <h3 className="text-base font-black text-white uppercase tracking-wider mb-2">
-                  AI Meal Photo Scanner
-                </h3>
-                <p className="text-xs text-neutral-400 max-w-sm leading-relaxed mb-6 font-medium">
-                  Instant visual plate analysis and macro detection are reserved for the upcoming Ultimatum Pro tier. Use Quick Add or the USDA database to log your food for free.
-                </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <button
-                    onClick={() => setActiveTab("quick")}
-                    className="px-5 py-2.5 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-colors shadow-md"
-                  >
-                    Quick Add (Free)
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("search")}
-                    className="px-5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-colors"
-                  >
-                    Search Database (Free)
-                  </button>
-                </div>
-              </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-14 px-4 text-center">
+              <h3 className="text-sm font-black uppercase tracking-[0.25em] text-white mb-2">
+                LOCKED
+              </h3>
+              <p className="text-xs text-neutral-500 font-medium max-w-xs mx-auto leading-relaxed">
+                This feature is currently locked. Use Quick Add or Database search to log your nutrition.
+              </p>
             </motion.div>
           )}
         </div>
