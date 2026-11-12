@@ -47,8 +47,19 @@ export function isPrimaryTab(pathname: string): boolean {
   return APP_TAB_ROUTES.includes(pathname);
 }
 
-export function isHiddenNavRoute(pathname: string): boolean {
-  return pathname === "/" || pathname.startsWith("/campaign/track") || HIDDEN_NAV_ROUTES.includes(pathname);
+export function isHiddenNavRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const clean = pathname.split("?")[0].replace(/\/+$/, "") || "/";
+  if (
+    clean === "/" ||
+    clean.startsWith("/campaign/track") ||
+    clean.startsWith("/privacy") ||
+    clean.startsWith("/terms-of-service") ||
+    clean.startsWith("/delete-account")
+  ) {
+    return true;
+  }
+  return HIDDEN_NAV_ROUTES.includes(clean);
 }
 
 // Roots where the hardware back button exits the app. Every other route must

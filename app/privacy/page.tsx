@@ -45,6 +45,14 @@ export default function PrivacyPage() {
 
   return (
     <div className={`min-h-screen bg-black text-white relative overflow-hidden pb-32 ${montserrat.className}`}>
+      {/* Ensure bottom navigation bar is completely hidden on legal compliance page */}
+      <style jsx global>{`
+        .global-nav-container,
+        nav.global-nav-container {
+          display: none !important;
+        }
+      `}</style>
+
       {/* Background Radial Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[500px] bg-white opacity-[0.02] blur-[150px] rounded-[100%] pointer-events-none" />
 
